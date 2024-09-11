@@ -20,7 +20,7 @@ export const restaurantInfo = [
     isStoryboardPublished: false,
     locationId: 10539996,
     menuUrl: "https://bit.ly/3R7sjh7",
-    name: "Dashanzi",
+    name: "Epytogo",
     offers: {
       hasDelivery: false,
       hasReservation: true,

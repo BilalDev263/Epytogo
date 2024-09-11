@@ -25,7 +25,7 @@ export const Welcome = ({ name, url }: Props) => (
   <Html>
     <Head />
     <Preview>
-      The sales intelligence platform that helps you uncover qualified leads.
+      La plateforme d'intelligence commerciale qui vous aide à découvrir des prospects qualifiés.
     </Preview>
     <Body style={main}>
       <Container style={container}>
@@ -33,23 +33,23 @@ export const Welcome = ({ name, url }: Props) => (
           src={`${baseUrl}/static/koala-logo.png`}
           width="170"
           height="50"
-          alt="Koala"
+          alt="Épytogo"
           style={logo}
         />
-        <Text style={paragraph}>Hi {name},</Text>
+        <Text style={paragraph}>Bonjour {name},</Text>
         <Text style={paragraph}>
-          Welcome to Koala, the sales intelligence platform that helps you
-          uncover qualified leads and close deals faster.
+          Bienvenue chez Épytogo, la plateforme d'intelligence commerciale qui
+          vous aide à découvrir des restaurants et des hotels égyptiens.
         </Text>
         <Section style={btnContainer}>
           <Button style={button} href={url}>
-            Get started
+            Commencer
           </Button>
         </Section>
         <Text style={paragraph}>
-          Best,
+          Cordialement,
           <br />
-          The Koala team
+          L'équipe d'Épytogo
         </Text>
         <Hr style={hr} />
         <Text style={footer}>
