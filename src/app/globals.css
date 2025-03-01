@@ -1,0 +1,159 @@
+/* src/app/globals.css - Version avec dark mode */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  scrollbar-width: thin;
+}
+
+/* Variables CSS pour le mode clair - Version lumineuse */
+:root {
+  --background: 0 0% 100%; /* Blanc pur */
+  --foreground: 0 0% 10%;
+  --sidebar: 0, 0%, 98%;
+  --card: 0, 0%, 100%; /* Blanc pur pour les cartes */
+  --error: 0, 64%, 48%;
+  --error-outline: 0, 72%, 56%, 0.5;
+  --card-foreground: 0 0% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 95% 7%;
+  --primary: 47 98% 66%; /* Jaune Epytogo */
+  --primary-foreground: 48 4% 21%;
+  --secondary: 0 0% 96%; /* Gris très clair */
+  --secondary-foreground: 0 0% 10%;
+  --muted: 0 0% 96%; /* Gris très clair */
+  --muted-foreground: 0 0% 45%;
+  --accent: 47 98% 66%; /* Jaune accent */
+  --accent-foreground: 0 0% 10%;
+  --destructive: 0 50% 50%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 90%; /* Bordures grises douces */
+  --input: 0 0% 100%;
+  --placeholder: 0, 0%, 56%;
+  --ring: 47 98% 66%; /* Jaune pour focus */
+  --radius: 0.5rem;
+  
+  /* Variables personnalisées Epytogo */
+  --epytogo-primary: 47 98% 66%;
+  --epytogo-secondary: 25 95% 53%;
+  --epytogo-gradient-from: 47 98% 66%;
+  --epytogo-gradient-to: 25 95% 53%;
+  
+  /* Variables pour le mode clair */
+  --light-bg-primary: 0 0% 100%; /* Blanc pur */
+  --light-bg-secondary: 0 0% 98%; /* Blanc cassé */
+  --light-text-primary: 0 0% 10%; /* Noir pour le texte */
+  --light-text-secondary: 0 0% 40%; /* Gris pour texte secondaire */
+}
+
+/* Variables CSS pour le mode sombre */
+.dark {
+  --background: 224 71% 4%; /* Bleu très sombre */
+  --foreground: 213 31% 91%;
+  --sidebar: 224, 71%, 8%;
+  --card: 224 71% 6%;
+  --error: 0, 64%, 58%;
+  --error-outline: 0, 72%, 66%, 0.5;
+  --card-foreground: 213 31% 91%;
+  --popover: 224 71% 6%;
+  --popover-foreground: 213 31% 91%;
+  --primary: 47 98% 66%; /* Garde le jaune en dark */
+  --primary-foreground: 48 4% 11%;
+  --secondary: 215 28% 17%;
+  --secondary-foreground: 213 31% 91%;
+  --muted: 215 28% 17%;
+  --muted-foreground: 218 11% 65%;
+  --accent: 47 98% 66%; /* Jaune accent en dark */
+  --accent-foreground: 48 4% 11%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 213 31% 91%;
+  --border: 215 28% 17%;
+  --input: 215 28% 17%;
+  --placeholder: 218, 11%, 65%;
+  --ring: 47 98% 66%; /* Garde le jaune pour focus */
+  
+  /* Variables personnalisées Epytogo en dark */
+  --epytogo-primary: 47 98% 66%;
+  --epytogo-secondary: 25 95% 53%;
+  --epytogo-gradient-from: 47 98% 66%;
+  --epytogo-gradient-to: 25 95% 53%;
+}
+
+/* Classes utilitaires pour line-clamp */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* Glassmorphism effects */
+.backdrop-blur-xl { 
+  backdrop-filter: blur(24px); 
+}
+
+.backdrop-blur-sm { 
+  backdrop-filter: blur(4px); 
+}
+
+/* Classes personnalisées Epytogo */
+.epytogo-gradient {
+  background: linear-gradient(135deg, hsl(var(--epytogo-gradient-from)), hsl(var(--epytogo-gradient-to)));
+}
+
+.epytogo-gradient-text {
+  background: linear-gradient(135deg, hsl(var(--epytogo-gradient-from)), hsl(var(--epytogo-gradient-to)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Scrollbar styling pour dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* Animation pour le toggle theme */
+@keyframes theme-transition {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.theme-transition {
+  animation: theme-transition 0.3s ease-out;
+}
+
+/* Styles pour les transitions fluides */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
