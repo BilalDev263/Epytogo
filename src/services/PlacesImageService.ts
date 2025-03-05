@@ -17,10 +17,58 @@ export class PlacesImageService {
     
     if (!this.API_KEY) {
       console.warn("Google Places API key is missing");
-      return "";
+      return "/placeholder-image.svg";
     }
 
-    return `${this.BASE_URL}/${photoName}/media?maxHeightPx=${maxHeight}&maxWidthPx=${maxWidth}&key=${this.API_KEY}`;
+    if (!photoName) {
+      return "/placeholder-image.svg";
+    }
+
+    // 🔧 CORRECTION : Nettoyer le photoName pour éviter les doublons
+    let cleanPhotoName = photoName;
+    
+    // Si le photoName contient déjà l'URL complète, extraire juste la partie nécessaire
+    if (photoName.startsWith('https://places.googleapis.com/v1/')) {
+      cleanPhotoName = photoName.replace('https://places.googleapis.com/v1/', '');
+    }
+    
+    // Supprimer "/media" et ses paramètres s'ils sont déjà présents
+    if (cleanPhotoName.includes('/media')) {
+      cleanPhotoName = cleanPhotoName.split('/media')[0];
+    }
+    
+    // S'assurer qu'on a le bon format
+    if (!cleanPhotoName.startsWith('places/')) {
+      cleanPhotoName = `places/${cleanPhotoName}`;
+    }
+
+    const imageUrl = `${this.BASE_URL}/${cleanPhotoName}/media?maxHeightPx=${maxHeight}&maxWidthPx=${maxWidth}&key=${this.API_KEY}`;
+    
+    // Debug pour voir l'URL générée
+    console.log('PlacesImageService - Original photoName:', photoName);
+    console.log('PlacesImageService - Clean photoName:', cleanPhotoName);
+    console.log('PlacesImageService - Generated URL:', imageUrl);
+    
+    return imageUrl;
+  }
+
+  /**
+   * Récupère l'URL de la première photo d'un lieu avec fallback
+   */
+  static getPlaceImageUrl(
+    place: { photos?: Array<{ name: string }> }, 
+    options: { maxWidth?: number; maxHeight?: number } = {}
+  ): string {
+    if (!this.hasPhoto(place)) {
+      return "/placeholder-image.svg";
+    }
+    
+    const photoName = this.getFirstPhotoName(place);
+    if (!photoName) {
+      return "/placeholder-image.svg";
+    }
+    
+    return this.getImageUrl(photoName, options);
   }
 
   /**

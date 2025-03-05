@@ -8,6 +8,7 @@ import { Edit } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { PlacesImageService } from "@/services/PlacesImageService";
 
 export default function Page({ params }: { params: { placeId: string } }) {
   const { placeId } = params;
@@ -183,11 +184,7 @@ export default function Page({ params }: { params: { placeId: string } }) {
           </h2>
           <div className="rounded-lg overflow-hidden mb-6 shadow-md">
             <Image
-              src={
-                placeDetails.photos && placeDetails.photos.length > 0
-                  ? `https://places.googleapis.com/v1/${placeDetails.photos[0].name}/media?key=${process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY}&maxWidthPx=1000&maxHeightPx=750`
-                  : "/placeholder-image.jpg"
-              }
+              src={PlacesImageService.getPlaceImageUrl(placeDetails, { maxWidth: 1000, maxHeight: 750 })}
               alt={placeDetails.displayName.text}
               className="w-full object-cover"
               width={1000}
@@ -195,9 +192,23 @@ export default function Page({ params }: { params: { placeId: string } }) {
             />
           </div>
           <div className="space-y-4 text-lg text-gray-700 dark:text-gray-300">
-            <p>
-              <strong className="text-gray-900 dark:text-white">Adresse :</strong> {placeDetails.formattedAddress}
-            </p>
+            <div>
+              <strong className="text-gray-900 dark:text-white">Adresse :</strong>{" "}
+              <a 
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(placeDetails.formattedAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors duration-200 inline-flex items-center gap-1"
+              >
+                {placeDetails.formattedAddress}
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+              <span className="block text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Cliquez pour obtenir un itinéraire
+              </span>
+            </div>
             <p>
               <strong className="text-gray-900 dark:text-white">Évaluation :</strong>{" "}
               <span className="text-yellow-600 dark:text-yellow-400 font-semibold">

@@ -1,13 +1,14 @@
-// src/services/ServiceInterface.ts - Version nettoyée
+// src/services/ServiceInterface.ts - Version complète
 export interface PlaceResult {
+  types?: string[];
   id: string;
   displayName: {
     text: string;
     languageCode: string;
   };
   formattedAddress: string;
-  internationalPhoneNumber: string;
-  currentOpeningHours: {
+  internationalPhoneNumber?: string;
+  currentOpeningHours?: {
     openNow: boolean;
     periods: Array<{
       open: {
@@ -25,7 +26,7 @@ export interface PlaceResult {
     }>;
     weekdayDescriptions: Array<string>;
   };
-  location: {
+  location?: {
     latitude: number;
     longitude: number;
   };
@@ -38,6 +39,31 @@ export interface PlaceResult {
       uri: string;
     }>;
   }>;
+}
+
+// Interface pour la recherche par proximité
+export interface SearchNearbyParams {
+  locationRestriction: {
+    circle: {
+      center: { latitude: number; longitude: number };
+      radius: number;
+    };
+  };
+  includedTypes: string[];
+  maxResultCount: number;
+  languageCode: string;
+}
+
+// Interface pour la recherche par texte
+export interface SearchTextParams {
+  textQuery: string;
+  languageCode: string;
+  maxResultCount: number;
+}
+
+// Réponse de l'API Google Places
+export interface GooglePlacesResponse {
+  places: PlaceResult[];
 }
 
 export interface ServiceInterface {
@@ -62,4 +88,9 @@ export interface ServiceInterface {
   searchById(params: { 
     placeId: string;
   }): Promise<PlaceResult>;
+
+  // Nouvelles méthodes pour la carte
+  searchNearby(params: SearchNearbyParams): Promise<GooglePlacesResponse>;
+  
+  searchText(params: SearchTextParams): Promise<GooglePlacesResponse>;
 }

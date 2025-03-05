@@ -1,23 +1,29 @@
-// src/components/home/Home.tsx - Version modernisée
+// src/components/home/Home.tsx (mise à jour)
 "use client";
 
-import { Navigation } from "@/components/navigation/HomeNav";
-import { Button } from "@/components/ui/button";
-import Container from "@/components/ui/container";
-import { useNavigation } from "@/hooks/useNavigation";
 import { Service } from "@/services/Service";
 import { PlaceResult } from "@/services/ServiceInterface";
 import { useStore } from "@/store/useStore";
-import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, Star, Filter } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CustomCard } from "./CustomCard";
+import { SkeletonCard } from "./SkeletonCard";
+import GoogleMapRender from "../GoogleMap";
+import { Button } from "../ui/button";
+import { Search, Map, Grid, Filter } from "lucide-react";
+import { adaptPlacesForCards } from "@/utils/placeAdapter";
 
-export const Home = () => {
-  const { navItemsHomePage } = useNavigation();
-  const [query, setQuery] = useState("");
-  const { itemId } = useStore();
+export function Home() {
+  const [places, setPlaces] = useState<PlaceResult[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [query, setQuery] = useState<string>("");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [showMap, setShowMap] = useState<boolean>(false);
+  const [filteredPlaces, setFilteredPlaces] = useState<PlaceResult[]>([]);
+
+  const { data: session } = useSession();
+  const { currentUser, setCurrentUser } = useStore();
   const router = useRouter();
 
   const service = useMemo(
@@ -25,189 +31,278 @@ export const Home = () => {
     []
   );
 
-  const fetchPlaces = useCallback(async () => {
-    if (itemId === "restaurant") {
-      return service.searchRestaurants({ name: query });
-    } else if (itemId === "hotel") {
-      return service.searchHotels({ name: query });
-    } else {
-      return service.searchRestaurantsAndHotels({ name: query });
-    }
-  }, [itemId, query, service]);
-
-  const {
-    data: places = [],
-    error,
-    isLoading,
-    refetch,
-  } = useQuery<PlaceResult[], Error>({
-    queryKey: ["places", query, itemId],
-    queryFn: fetchPlaces,
-    enabled: false,
-  });
-
-  const handleSubmit = (e?: FormEvent<HTMLFormElement> | React.MouseEvent | React.KeyboardEvent) => {
-    if (e) e.preventDefault();
-    refetch();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSubmit(e);
-    }
-  };
-
-  const handlePlaceClick = (placeId: string) => {
-    router.push(`/places/${placeId}`);
-  };
-
+  // Charger les lieux populaires d'Égypte au démarrage
   useEffect(() => {
-    refetch();
-  }, [refetch, itemId]);
+    if (session?.user) {
+      setCurrentUser(session.user);
+    }
+    // Charger les lieux populaires même sans utilisateur connecté
+    loadPopularPlaces();
+  }, [session]);
+
+  // Fonction pour calculer le nombre max de résultats selon les filtres
+  const getMaxResults = () => {
+    const selectedCount = selectedTypes.length;
+    if (selectedCount === 0) return 8; // Par défaut
+    if (selectedCount === 1) return 2; // 2 si un seul type
+    if (selectedCount === 2) return 4; // 4 si deux types
+    return 6; // 6 si trois types ou plus
+  };
+
+  const loadPopularPlaces = async () => {
+    setLoading(true);
+    try {
+      const maxResults = getMaxResults();
+      
+      // Recherche de lieux populaires en Égypte
+      const results = await service.searchText({
+        textQuery: "best restaurants hotels attractions Egypt Cairo Alexandria Luxor",
+        languageCode: "fr",
+        maxResultCount: maxResults,
+      });
+
+      if (results.places && results.places.length > 0) {
+        setPlaces(results.places);
+        setFilteredPlaces(results.places);
+      } else {
+        // Fallback avec searchNearby si searchText ne donne rien
+        const nearbyResults = await service.searchNearby({
+          locationRestriction: {
+            circle: {
+              center: { latitude: 26.8206, longitude: 30.8025 },
+              radius: 500000
+            }
+          },
+          includedTypes: ["restaurant", "lodging", "tourist_attraction"],
+          maxResultCount: maxResults,
+          languageCode: "fr",
+        });
+        
+        if (nearbyResults.places && nearbyResults.places.length > 0) {
+          setPlaces(nearbyResults.places);
+          setFilteredPlaces(nearbyResults.places);
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des lieux :", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    setLoading(true);
+    try {
+      const maxResults = getMaxResults();
+      
+      const results = await service.searchText({
+        textQuery: `${query} Égypte`,
+        languageCode: "fr",
+        maxResultCount: maxResults,
+      });
+
+      if (results.places && results.places.length > 0) {
+        const newPlaces = results.places;
+        setPlaces(newPlaces);
+        applyFilters(newPlaces);
+      } else {
+        // Aucun résultat trouvé
+        setPlaces([]);
+        setFilteredPlaces([]);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la recherche :", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = (placesToFilter: PlaceResult[] = places) => {
+    let filtered = placesToFilter;
+
+    if (selectedTypes.length > 0) {
+      filtered = placesToFilter.filter(place =>
+        place.types?.some(type => selectedTypes.includes(type))
+      );
+    }
+
+    setFilteredPlaces(filtered);
+  };
+
+  const handleTypeFilter = (type: string) => {
+    const newSelectedTypes = selectedTypes.includes(type)
+      ? selectedTypes.filter(t => t !== type)
+      : [...selectedTypes, type];
+    
+    setSelectedTypes(newSelectedTypes);
+    
+    // Appliquer les filtres
+    let filtered = places;
+    if (newSelectedTypes.length > 0) {
+      filtered = places.filter(place =>
+        place.types?.some(t => newSelectedTypes.includes(t))
+      );
+    }
+    setFilteredPlaces(filtered);
+  };
+
+  const handleMarkerClick = (place: PlaceResult) => {
+    // Optionnel : comportement lors du clic sur un marqueur
+    console.log("Marqueur cliqué :", place.displayName?.text);
+  };
+
+  const getTypeLabel = (type: string) => {
+    const labels: { [key: string]: string } = {
+      restaurant: "🍽️ Restaurants",
+      lodging: "🏨 Hôtels", 
+      tourist_attraction: "🏛️ Attractions"
+    };
+    return labels[type] || type;
+  };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gradient-to-br dark:from-slate-950 dark:via-gray-950 dark:to-black transition-all duration-500">
-      {/* Hero Section moderne */}
-      <Container>
-        <div className="text-center py-16">
-          {/* Titre principal avec gradient */}
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 epytogo-gradient-text leading-tight">
-            Découvrez L'Égypte
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <div className="container mx-auto px-4 py-8">
+        {/* En-tête avec recherche */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Découvrez l'Égypte 🇪🇬
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Explorez les merveilles de l'Égypte antique. Des pyramides majestueuses aux temples sacrés, 
-            trouvez les meilleurs restaurants et hôtels pour votre voyage inoubliable.
+          <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+            Restaurants 🍽️, hôtels 🏨 et attractions touristiques 🏛️
           </p>
 
-          {/* Navigation moderne */}
-          <div className="flex justify-center gap-2 p-6">
-            {navItemsHomePage.map((item) => (
-              <button
-                key={item.id}
-                className={`
-                  flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all duration-300
-                  transform hover:scale-105 hover:shadow-lg
-                  ${item.id === itemId 
-                    ? 'epytogo-gradient text-gray-900 shadow-xl' 
-                    : 'bg-gray-100 dark:bg-white/5 backdrop-blur-sm text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10'
-                  }
-                `}
-                onClick={item.handleClick}
-              >
-                {item.icon}
-                <span className="hidden md:inline">{item.name}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Barre de recherche moderne */}
-          <div className="max-w-4xl mx-auto mt-8">
-            <div className="relative">
-              <div className="relative bg-white/95 dark:bg-white/5 backdrop-blur-xl rounded-3xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-2xl">
-                <div className="flex items-center">
-                  <Search className="absolute left-6 w-6 h-6 text-gray-500 dark:text-gray-500" />
-                  <input
-                    className="w-full h-16 pl-16 pr-40 bg-transparent text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-500 text-lg focus:outline-none"
-                    name="search"
-                    placeholder="Rechercher un restaurant, un hôtel..."
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                  />
-                  <button 
-                    onClick={handleSubmit}
-                    className="absolute right-2 h-12 px-8 epytogo-gradient text-gray-900 font-semibold rounded-2xl hover:shadow-lg transition-all duration-300 transform hover:scale-105"
-                  >
-                    Rechercher
-                  </button>
-                </div>
+          {/* Barre de recherche */}
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-6">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher des restaurants, hôtels..."
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {loading ? "..." : "Rechercher"}
+              </Button>
             </div>
-            
-            {/* Suggestions populaires */}
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              {['Pyramides de Gizeh', 'Temple de Karnak', 'Vallée des Rois', 'Alexandrie'].map((suggestion) => (
-                <button 
-                  key={suggestion}
-                  className="px-4 py-2 bg-gray-100 dark:bg-white/5 backdrop-blur-sm text-gray-600 dark:text-gray-400 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-300 border border-gray-200 dark:border-white/10"
-                  onClick={() => setQuery(suggestion)}
+          </form>
+
+          {/* Filtres et contrôles d'affichage */}
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
+            {/* Filtres par type */}
+            <div className="flex gap-2">
+              <span className="flex items-center text-gray-600 dark:text-gray-400">
+                <Filter className="h-4 w-4 mr-1" />
+                Filtres :
+              </span>
+              {["restaurant", "lodging", "tourist_attraction"].map(type => (
+                <Button
+                  key={type}
+                  variant={selectedTypes.includes(type) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleTypeFilter(type)}
+                  className="text-sm"
                 >
-                  {suggestion}
-                </button>
+                  {getTypeLabel(type)}
+                </Button>
               ))}
             </div>
+
+            {/* Bouton carte/grille */}
+            <Button
+              variant="outline"
+              onClick={() => setShowMap(!showMap)}
+              className="flex items-center gap-2"
+            >
+              {showMap ? (
+                <>
+                  <Grid className="h-4 w-4" />
+                  Vue Grille
+                </>
+              ) : (
+                <>
+                  <Map className="h-4 w-4" />
+                  Vue Carte
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
-        {/* Section des résultats */}
-        <div className="pb-16">
-          {error && (
-            <div className="mb-8 p-4 bg-red-500/10 dark:bg-red-500/20 border border-red-500/20 dark:border-red-500/30 rounded-xl text-red-400 dark:text-red-300 text-center">
-              {error.message}
-            </div>
-          )}
+        {/* Affichage conditionnel : Carte ou Grille */}
+        {showMap ? (
+          <div className="mb-8">
+            <GoogleMapRender
+              places={filteredPlaces}
+              onMarkerClick={handleMarkerClick}
+              className="w-full h-96 lg:h-[500px]"
+            />
+            <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">
+              {filteredPlaces.length} lieu(x) affiché(s) sur la carte
+              {selectedTypes.length > 0 && (
+                <span className="ml-2 text-blue-600 dark:text-blue-400">
+                  • Max {getMaxResults()} résultats selon filtres
+                </span>
+              )}
+            </p>
+          </div>
+        ) : null}
 
-          {places.length > 0 && (
-            <div className="mb-8 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Résultats de recherche ({places.length})
-              </h2>
-              <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-white/5 backdrop-blur-sm text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-300 border border-gray-200 dark:border-white/10">
-                <Filter className="w-4 h-4" />
-                Filtres
-              </button>
-            </div>
-          )}
-          
-          <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 px-4 md:px-0">
-            {isLoading
-              ? Array.from({ length: 6 }).map((_, index) => (
-                  <div key={index} className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden animate-pulse border border-gray-100 dark:border-slate-700">
-                    <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800"></div>
-                    <div className="p-6">
-                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-lg mb-2"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 w-3/4"></div>
-                      <div className="flex justify-between">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/3"></div>
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/4"></div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              : places.map((place) => (
-                  <CustomCard
-                    key={place.id}
-                    className="min-h-[300px] w-full"
-                    place={{
-                      placeId: place.id,
-                      name: place.displayName.text,
-                      address: place.formattedAddress,
-                      rating: place.rating || 0,
-                      photo: place.photos?.[0]?.name,
-                      phoneNumber: place.internationalPhoneNumber,
-                      isOpen: place.currentOpeningHours?.openNow
-                    }}
-                    onClick={() => handlePlaceClick(place.id)}
-                  />
-                ))
-            }
+        {/* Grille des résultats */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+              {query ? `Résultats pour "${query}"` : "Lieux populaires"}
+            </h2>
+            <span className="text-gray-600 dark:text-gray-400">
+              {filteredPlaces.length} résultat(s)
+            </span>
           </div>
 
-          {/* Message d'état vide */}
-          {!isLoading && places.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-24 h-24 bg-gradient-to-br from-yellow-400/20 to-orange-400/20 dark:from-yellow-400/10 dark:to-orange-400/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-yellow-200 dark:border-yellow-400/20">
-                <Search className="w-12 h-12 text-yellow-600 dark:text-yellow-300" />
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <SkeletonCard key={index} />
+              ))}
+            </div>
+          ) : filteredPlaces.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {adaptPlacesForCards(filteredPlaces).map((place, index) => (
+                <CustomCard 
+                  key={`${place.placeId}-${index}`} 
+                  place={place}
+                  onClick={() => {
+                    // Navigation vers la page de détails du lieu avec Next.js router
+                    router.push(`/places/${place.placeId}`);
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-gray-500 dark:text-gray-400 text-lg">
+                {query ? "Aucun résultat trouvé" : "Aucun lieu disponible"}
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Commencez votre exploration</h3>
-              <p className="text-gray-600 dark:text-gray-500 max-w-md mx-auto">
-                Utilisez la barre de recherche ci-dessus pour découvrir les meilleurs restaurants et hôtels d'Égypte.
-              </p>
+              {query && (
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                  Essayez avec d'autres mots-clés
+                </p>
+              )}
             </div>
           )}
         </div>
-      </Container>
+      </div>
     </div>
   );
-};
+}
