@@ -40,8 +40,8 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+.env.example
 .eslintrc.json
-.github/workflows/ci-local.yml
 .gitignore
 components.json
 next.config.mjs
@@ -106,6 +106,7 @@ src/components/form/register/NameFields.tsx
 src/components/form/register/PasswordFIeld.tsx
 src/components/form/register/TermsAndConditions.tsx
 src/components/form/SubmitButton.tsx
+src/components/GoogleMap.tsx
 src/components/Header.tsx
 src/components/home/CustomCard.tsx
 src/components/home/Home.tsx
@@ -115,6 +116,7 @@ src/components/navigation/HomeNav.tsx
 src/components/navigation/types.ts
 src/components/Profile.tsx
 src/components/Register.tsx
+src/components/TravelChatbot.tsx
 src/components/ui/button.tsx
 src/components/ui/card.tsx
 src/components/ui/carousel.tsx
@@ -144,11 +146,13 @@ src/lib/utils.ts
 src/middleware.ts
 src/providers/Providers.tsx
 src/providers/ThemeProvider.tsx
+src/services/GeminiGoogleService.ts
 src/services/PlacesImageService.ts
 src/services/Service.ts
 src/services/ServiceInterface.ts
 src/store/useStore.ts
 src/types.d.ts
+src/utils/placeAdapter.ts
 src/validators/loginSchema.ts
 src/validators/registerSchema.ts
 tailwind.config.ts
@@ -158,47 +162,616 @@ tsconfig.json
 <files>
 This section contains the contents of the repository's files.
 
+<file path="src/components/TravelChatbot.tsx">
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageCircle, X, Send, MapPin, Utensils, Hotel, Camera, Sparkles } from 'lucide-react';
+import { GeminiGoogleService, ChatMessage } from '@/services/GeminiGoogleService';
+
+interface Message {
+  id: string;
+  type: 'user' | 'bot';
+  content: string;
+  timestamp: Date;
+  recommendations?: {
+    hotel?: any;
+    restaurant?: any;
+    attraction?: any;
+    location?: string;
+  } | null; // ✅ Remettre | null pour correspondre à AIResponse
+}
+
+interface ChatbotProps {
+  onRecommendation?: (recommendations: any) => void;
+}
+
+const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      type: 'bot',
+      content: "🐪 Ahlan wa sahlan ! Je suis Anubis, votre guide personnel pour l'Égypte ! Je connais tous les secrets de mes terres : des pyramides de Gizeh aux temples de Louxor, des restaurants cachés du Caire aux hôtels de rêve d'Assouan. Que puis-je vous faire découvrir aujourd'hui ? 🏺✨",
+      timestamp: new Date()
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Simulation d'une API de recommandations
+  const generateRecommendations = (userMessage: string) => {
+    const message = userMessage.toLowerCase();
+    
+    // Analyse basique du message pour déterminer les préférences
+    const preferences = {
+      location: '',
+      budget: '',
+      hotelType: '',
+      interests: []
+    };
+
+    // Détection de la localisation
+    if (message.includes('cairo') || message.includes('caire')) {
+      preferences.location = 'Le Caire';
+    } else if (message.includes('alexandria') || message.includes('alexandrie')) {
+      preferences.location = 'Alexandrie';
+    } else if (message.includes('luxor') || message.includes('louxor')) {
+      preferences.location = 'Luxor';
+    } else if (message.includes('aswan') || message.includes('assouan')) {
+      preferences.location = 'Assouan';
+    } else {
+      preferences.location = 'Le Caire'; // Par défaut
+    }
+
+    // Détection du budget
+    if (message.includes('luxe') || message.includes('cher') || message.includes('haut de gamme')) {
+      preferences.budget = 'luxe';
+    } else if (message.includes('moyen') || message.includes('standard')) {
+      preferences.budget = 'moyen';
+    } else if (message.includes('budget') || message.includes('économique') || message.includes('pas cher')) {
+      preferences.budget = 'budget';
+    } else {
+      preferences.budget = 'moyen';
+    }
+
+    // Recommandations basées sur les préférences
+    const recommendations = getRecommendations(preferences);
+    
+    return recommendations;
+  };
+
+  const getRecommendations = (preferences: any) => {
+    // Types pour TypeScript
+    type BudgetType = 'luxe' | 'moyen' | 'budget';
+    type LocationType = 'Le Caire' | 'Alexandrie' | 'Luxor';
+    
+    // Base de données simplifiée de recommandations
+    const hotels: Record<BudgetType, Record<LocationType, any>> = {
+      luxe: {
+        'Le Caire': { name: "Four Seasons Hotel Cairo at Nile Plaza", rating: 4.8, price: "300-500€/nuit", description: "Vue sur le Nil, spa luxueux" },
+        'Alexandrie': { name: "Four Seasons Hotel Alexandria", rating: 4.7, price: "250-400€/nuit", description: "Vue sur la Méditerranée" },
+        'Luxor': { name: "Sofitel Winter Palace Luxor", rating: 4.6, price: "200-350€/nuit", description: "Hôtel historique face au Nil" }
+      },
+      moyen: {
+        'Le Caire': { name: "Steigenberger El Tahrir Cairo", rating: 4.3, price: "80-150€/nuit", description: "Centre-ville, proche du musée" },
+        'Alexandrie': { name: "Hilton Alexandria Corniche", rating: 4.2, price: "70-120€/nuit", description: "Sur la corniche d'Alexandrie" },
+        'Luxor': { name: "Mercure Luxor Karnak", rating: 4.1, price: "60-100€/nuit", description: "Proche des temples de Karnak" }
+      },
+      budget: {
+        'Le Caire': { name: "Cairo Khan Hotel", rating: 3.8, price: "25-50€/nuit", description: "Quartier Khan el-Khalili" },
+        'Alexandrie': { name: "New Capri Hotel", rating: 3.6, price: "20-40€/nuit", description: "Centre-ville d'Alexandrie" },
+        'Luxor': { name: "Nefertiti Hotel Luxor", rating: 3.7, price: "15-35€/nuit", description: "Proche de la gare" }
+      }
+    };
+
+    const restaurants: Record<LocationType, any> = {
+      'Le Caire': { name: "Zitouni", cuisine: "Orientale moderne", rating: 4.5, price: "40-60€", description: "Restaurant du Four Seasons, cuisine égyptienne raffinée" },
+      'Alexandrie': { name: "Fish Market", cuisine: "Fruits de mer", rating: 4.4, price: "25-40€", description: "Poissons frais de la Méditerranée" },
+      'Luxor': { name: "1886 Restaurant", cuisine: "Internationale", rating: 4.3, price: "35-55€", description: "Restaurant historique au Winter Palace" }
+    };
+
+    const attractions: Record<LocationType, any> = {
+      'Le Caire': { name: "Pyramides de Gizeh", type: "Site historique", rating: 4.9, description: "Les célèbres pyramides et le Sphinx" },
+      'Alexandrie': { name: "Bibliothèque d'Alexandrie", type: "Culturel", rating: 4.6, description: "Moderne bibliothèque sur le site antique" },
+      'Luxor': { name: "Vallée des Rois", type: "Site archéologique", rating: 4.8, description: "Tombeaux des pharaons du Nouvel Empire" }
+    };
+
+    const location = (preferences.location || 'Le Caire') as LocationType;
+    const budget = (preferences.budget || 'moyen') as BudgetType;
+
+    return {
+      hotel: hotels[budget]?.[location] || hotels.moyen[location],
+      restaurant: restaurants[location],
+      attraction: attractions[location],
+      location: location
+    };
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
+
+    // Ajouter le message utilisateur
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: inputMessage,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    
+    // Mettre à jour l'historique de conversation
+    const newConversationHistory = [
+      ...conversationHistory,
+      { role: 'user' as const, content: inputMessage }
+    ];
+    setConversationHistory(newConversationHistory);
+    
+    setInputMessage('');
+    setIsTyping(true);
+
+    try {
+      // Appel à Claude + Google Places
+      const aiResponse = await GeminiGoogleService.sendMessage(newConversationHistory);
+      
+      // Mettre à jour l'historique avec la réponse
+      setConversationHistory([
+        ...newConversationHistory,
+        { role: 'assistant' as const, content: aiResponse.message }
+      ]);
+
+      // Créer la réponse du bot
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: aiResponse.message,
+        timestamp: new Date(),
+        recommendations: aiResponse.recommendations
+      };
+
+      setMessages(prev => [...prev, botResponse]);
+
+      // Callback pour mettre à jour la carte si nécessaire
+      if (onRecommendation && aiResponse.recommendations) {
+        onRecommendation(aiResponse.recommendations);
+      }
+
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du message:', error);
+      
+      // Message d'erreur sympathique
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: "🏺 Pardonnez-moi, les vents du désert perturbent ma connexion aux anciens savoirs ! Pouvez-vous répéter votre question ?",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      {/* Bouton flottant avec pyramide */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="bg-black hover:bg-gray-900 text-yellow-400 rounded-full p-4 shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-yellow-600"
+        >
+          {/* Icône pyramide SVG */}
+          <svg 
+            className="h-7 w-7" 
+            viewBox="0 0 24 24" 
+            fill="currentColor"
+          >
+            <path d="M12 2L2 22h20L12 2zm0 3.84L19.16 20H4.84L12 5.84z"/>
+            <path d="M12 5.84L16.58 18H7.42L12 5.84z" opacity="0.7"/>
+          </svg>
+        </button>
+      )}
+
+      {/* Interface de chat */}
+      {isOpen && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-96 h-[600px] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {/* En-tête */}
+          <div className="bg-gradient-to-r from-yellow-600 via-yellow-700 to-amber-800 text-white p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-black/30 rounded-full flex items-center justify-center border border-yellow-400">
+                <svg className="h-6 w-6 text-yellow-300" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 22h20L12 2zm0 3.84L19.16 20H4.84L12 5.84z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold">Anubis - Guide Égyptien</h3>
+                <p className="text-sm text-yellow-100">En ligne • Hiéroglyphes décodés ✨</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div                 className={`max-w-[80%] ${
+                  message.type === 'user'
+                    ? 'bg-yellow-600 text-white rounded-2xl rounded-br-md'
+                    : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md shadow-md border-l-4 border-yellow-600'
+                } px-4 py-3`}>
+                  <p className="text-sm">{message.content}</p>
+                  
+                  {/* Recommandations */}
+                  {message.recommendations && (
+                    <div className="mt-4 space-y-3">
+                      {/* Hôtel */}
+                      <div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 border border-yellow-200 dark:border-yellow-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Hotel className="h-4 w-4 text-yellow-600" />
+                          <span className="font-semibold text-yellow-800 dark:text-yellow-300">🏨 Palais recommandé</span>
+                        </div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.hotel?.name}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.hotel?.description}</p>
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.hotel?.rating}</span>
+                          <span className="text-sm font-medium text-yellow-600">{message.recommendations.hotel?.price}</span>
+                        </div>
+                      </div>
+
+                      {/* Restaurant */}
+                      <div className="bg-orange-50 dark:bg-orange-900/30 rounded-lg p-3 border border-orange-200 dark:border-orange-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Utensils className="h-4 w-4 text-orange-600" />
+                          <span className="font-semibold text-orange-800 dark:text-orange-300">🍽️ Festin des pharaons</span>
+                        </div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.restaurant?.name}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.restaurant?.description}</p>
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.restaurant?.rating}</span>
+                          <span className="text-sm text-gray-500">{message.recommendations.restaurant?.cuisine} • {message.recommendations.restaurant?.price}</span>
+                        </div>
+                      </div>
+
+                      {/* Attraction */}
+                      <div className="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-3 border border-amber-200 dark:border-amber-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Camera className="h-4 w-4 text-amber-600" />
+                          <span className="font-semibold text-amber-800 dark:text-amber-300">🏺 Trésor ancestral</span>
+                        </div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.attraction?.name}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.attraction?.description}</p>
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.attraction?.rating}</span>
+                          <span className="text-sm text-gray-500">{message.recommendations.attraction?.type}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <p className="text-xs opacity-70 mt-2">
+                    {message.timestamp.toLocaleTimeString('fr-FR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </p>
+                </div>
+              </div>
+            ))}
+
+            {/* Indicateur de frappe */}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-white dark:bg-gray-700 rounded-2xl rounded-bl-md shadow-md px-4 py-3">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Zone de saisie */}
+          <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex gap-2">
+              <textarea
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Racontez-moi vos rêves de voyage en Égypte... 🐪"
+                className="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-500 focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                rows={2}
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={!inputMessage.trim() || isTyping}
+                className="self-end bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-400 text-white rounded-lg p-2 transition-colors"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TravelChatbot;
+</file>
+
+<file path="src/services/GeminiGoogleService.ts">
+// src/services/GeminiGoogleService.ts
+import { Service } from './Service';
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AIResponse {
+  message: string;
+  searchParams?: {
+    location: string;
+    types: string[];
+    query: string;
+    budget?: string;
+  };
+  recommendations?: {
+    hotel?: any;
+    restaurant?: any;
+    attraction?: any;
+    location?: string;
+  } | null; // ✅ Remettre | null pour être cohérent
+}
+
+export class GeminiGoogleService {
+  private static readonly GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  private static readonly GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+  private static googleService = new Service("https://places.googleapis.com", "POST");
+
+  private static readonly SYSTEM_PROMPT = `Tu es Anubis, guide touristique égyptien expert et chaleureux.
+
+PERSONNALITÉ :
+- Utilise "Ahlan wa sahlan", "Mashallah", "Par les dieux d'Égypte"
+- Emojis égyptiens : 🏺🐪🏛️⚱️🌅👑
+- Passionné par l'Égypte et son histoire
+
+MISSION :
+- Aide à planifier des séjours en Égypte
+- Analyse les demandes pour extraire localisation, budget, types de lieux
+- Réponds naturellement puis ajoute les paramètres de recherche
+
+FORMAT DE RÉPONSE :
+[Message naturel d'Anubis]
+
+[SEARCH_PARAMS]
+{
+  "location": "ville égyptienne",
+  "types": ["restaurant", "lodging", "tourist_attraction"],
+  "budget": "économique|moyen|luxe",
+  "query": "mots-clés pour Google Places"
+}
+
+EXEMPLE :
+User: "Je veux un restaurant de poisson à Alexandrie"
+Réponse: "🏺 Ahlan wa sahlan ! Alexandrie, perle de la Méditerranée ! Ses restaurants de fruits de mer sont légendaires !"
+
+[SEARCH_PARAMS]
+{
+  "location": "Alexandrie",
+  "types": ["restaurant"],
+  "budget": "moyen", 
+  "query": "seafood restaurant Alexandria Egypt"
+}`;
+
+  static async sendMessage(messages: ChatMessage[]): Promise<AIResponse> {
+    try {
+      console.log('🔍 Test Gemini API Key:', this.GEMINI_API_KEY ? 'Présente ✅' : 'Manquante ❌');
+      
+      const geminiResponse = await this.callGeminiAPI(messages);
+      
+      if (geminiResponse) {
+        console.log('✅ Réponse Gemini reçue:', geminiResponse.substring(0, 100) + '...');
+        const searchParams = this.parseSearchParams(geminiResponse);
+        let recommendations = null; // ✅ Initialiser avec null
+        
+        if (searchParams) {
+          recommendations = await this.searchWithGooglePlaces(searchParams);
+        }
+
+        return {
+          message: geminiResponse.replace(/\[SEARCH_PARAMS\][\s\S]*/, '').trim(),
+          searchParams,
+          recommendations
+        };
+      }
+      
+      return this.getFallbackResponse(messages[messages.length - 1]?.content || '');
+      
+    } catch (error) {
+      console.error('❌ Erreur Gemini:', error);
+      return this.getFallbackResponse(messages[messages.length - 1]?.content || '');
+    }
+  }
+
+  private static async callGeminiAPI(messages: ChatMessage[]): Promise<string | null> {
+    try {
+      // Construire le prompt pour Gemini
+      const conversation = messages.map(m => `${m.role}: ${m.content}`).join('\n');
+      const fullPrompt = `${this.SYSTEM_PROMPT}\n\nConversation:\n${conversation}\n\nAnubis:`;
+
+      const response = await fetch(`${this.GEMINI_API_URL}?key=${this.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: fullPrompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.8,
+            topP: 0.9,
+            maxOutputTokens: 800
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.candidates[0]?.content?.parts[0]?.text || null;
+      
+    } catch (error) {
+      console.warn('Gemini non disponible:', error);
+      return null; // ✅ Retourner null comme attendu par le type
+    }
+  }
+
+  private static parseSearchParams(geminiResponse: string): any {
+    try {
+      const match = geminiResponse.match(/\[SEARCH_PARAMS\]\s*(\{[\s\S]*?\})/);
+      if (match) {
+        return JSON.parse(match[1]);
+      }
+    } catch (error) {
+      console.error('Erreur parsing:', error);
+    }
+    return null;
+  }
+
+  private static async searchWithGooglePlaces(searchParams: any): Promise<any | null> {
+    try {
+      const cityCoordinates: { [key: string]: { lat: number; lng: number } } = {
+        'Le Caire': { lat: 30.0444, lng: 31.2357 },
+        'Cairo': { lat: 30.0444, lng: 31.2357 },
+        'Alexandrie': { lat: 31.2001, lng: 29.9187 },
+        'Alexandria': { lat: 31.2001, lng: 29.9187 },
+        'Luxor': { lat: 25.6872, lng: 32.6396 },
+        'Louxor': { lat: 25.6872, lng: 32.6396 },
+        'Assouan': { lat: 24.0889, lng: 32.8998 },
+        'Aswan': { lat: 24.0889, lng: 32.8998 }
+      };
+
+      const location = searchParams.location || 'Le Caire';
+      const coords = cityCoordinates[location] || cityCoordinates['Le Caire'];
+
+      const results = await this.googleService.searchNearby({
+        locationRestriction: {
+          circle: {
+            center: { latitude: coords.lat, longitude: coords.lng },
+            radius: 25000
+          }
+        },
+        includedTypes: searchParams.types || ["restaurant", "lodging", "tourist_attraction"],
+        maxResultCount: 8,
+        languageCode: "fr",
+      });
+
+      if (results.places && results.places.length > 0) {
+        const organized = this.organizeResultsByType(results.places);
+        return {
+          location: location,
+          hotel: organized.hotels[0],
+          restaurant: organized.restaurants[0], 
+          attraction: organized.attractions[0],
+          allResults: organized
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Erreur Google Places:', error);
+      return null;
+    }
+  }
+
+  private static organizeResultsByType(places: any[]): any {
+    const hotels = places.filter(place => 
+      place.types?.some((type: string) => ['lodging', 'hotel', 'motel', 'resort'].includes(type))
+    );
+    
+    const restaurants = places.filter(place =>
+      place.types?.some((type: string) => ['restaurant', 'food', 'meal_takeaway', 'cafe'].includes(type))
+    );
+    
+    const attractions = places.filter(place =>
+      place.types?.some((type: string) => ['tourist_attraction', 'museum', 'park', 'zoo'].includes(type))
+    );
+
+    return { hotels, restaurants, attractions };
+  }
+
+  private static getFallbackResponse(userMessage: string): AIResponse {
+    // Même logique que Ollama
+    const message = userMessage.toLowerCase();
+    
+    let location = 'Le Caire';
+    let types = ['restaurant', 'lodging', 'tourist_attraction'];
+    let budget = 'moyen';
+    
+    if (message.includes('alexandria') || message.includes('alexandrie')) location = 'Alexandrie';
+    else if (message.includes('luxor') || message.includes('louxor')) location = 'Luxor';
+    else if (message.includes('aswan') || message.includes('assouan')) location = 'Assouan';
+    
+    if (message.includes('restaurant') || message.includes('manger')) types = ['restaurant'];
+    else if (message.includes('hotel') || message.includes('dormir')) types = ['lodging'];
+    else if (message.includes('visiter') || message.includes('attraction')) types = ['tourist_attraction'];
+    
+    if (message.includes('pas cher') || message.includes('budget')) budget = 'économique';
+    else if (message.includes('luxe') || message.includes('cher')) budget = 'luxe';
+
+    const responses = [
+      `🐪 Ahlan wa sahlan ! Les dieux d'Égypte m'inspirent pour ${location} !`,
+      `🏺 Mashallah ! ${location} vous dévoilera ses merveilles !`,
+      `👑 Par les pharaons ! Voici les trésors de ${location} !`
+    ];
+
+    return {
+      message: responses[Math.floor(Math.random() * responses.length)],
+      searchParams: { location, types, query: `${types.join(' ')} ${location}`, budget },
+      recommendations: null // ✅ Retourner null pour être cohérent
+    };
+  }
+}
+</file>
+
 <file path=".eslintrc.json">
 {
   "extends": "next/core-web-vitals"
 }
-</file>
-
-<file path=".github/workflows/ci-local.yml">
-name: CI-LOCAL
-on:
-  push:
-    branches: ["main", "develop"]
-  pull_request:
-    types: [opened, synchronize]
-
-jobs:
-  build:
-    name: Build and Test
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 8
-
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build
-        run: npm run build
 </file>
 
 <file path=".gitignore">
@@ -277,69 +850,6 @@ const nextConfig = {
 };
 
 export default nextConfig;
-</file>
-
-<file path="package.json">
-{
-  "name": "epytogo",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "postinstall": "prisma generate",
-    "email": "email dev"
-  },
-  "dependencies": {
-    "@hookform/resolvers": "^3.9.0",
-    "@prisma/client": "^5.19.1",
-    "@radix-ui/react-checkbox": "^1.1.1",
-    "@radix-ui/react-dialog": "^1.1.1",
-    "@radix-ui/react-toast": "^1.2.1",
-    "@radix-ui/react-tooltip": "^1.1.2",
-    "@react-email/components": "0.0.25",
-    "@react-email/tailwind": "0.1.0",
-    "@tanstack/react-query": "^5.55.4",
-    "@tanstack/react-query-devtools": "^5.55.4",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/pug": "^2.0.10",
-    "add": "2.0.6",
-    "bcryptjs": "^2.4.3",
-    "check-password-strength": "^2.0.10",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
-    "embla-carousel-autoplay": "^8.2.1",
-    "embla-carousel-react": "^8.2.1",
-    "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.439.0",
-    "next": "14.2.9",
-    "next-auth": "^4.24.7",
-    "prisma": "^5.19.1",
-    "pug": "^3.0.3",
-    "react": "^18",
-    "react-dom": "^18",
-    "react-email": "^3.0.1",
-    "react-hook-form": "^7.53.0",
-    "resend": "^4.0.0",
-    "tailwind-merge": "^2.5.2",
-    "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.23.8",
-    "zustand": "^4.5.5"
-  },
-  "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.6",
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.5",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
-  }
-}
 </file>
 
 <file path="postcss.config.mjs">
@@ -8015,284 +8525,6 @@ export default function HomePage() {
 }
 </file>
 
-<file path="src/app/(home)/places/[placeId]/page.tsx">
-"use client";
-
-import { Button } from "@/components/ui/button";
-import { Service } from "@/services/Service";
-import { PlaceResult } from "@/services/ServiceInterface";
-import { useStore } from "@/store/useStore";
-import { Edit } from "lucide-react";
-import { useSession } from "next-auth/react";
-import Image from "next/image";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-
-export default function Page({ params }: { params: { placeId: string } }) {
-  const { placeId } = params;
-
-  const [placeDetails, setPlaceDetails] = useState<PlaceResult | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [rating, setRating] = useState<number>(0);
-  const [comment, setComment] = useState<string>("");
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
-
-  const { data: session } = useSession();
-  const { currentUser, setCurrentUser } = useStore();
-
-  const service = useMemo(
-    () => new Service("https://places.googleapis.com", "POST"),
-    []
-  );
-
-  const fetchPlaceDetails = async () => {
-    if (!placeId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const results = await service.searchById({
-        placeId: String(placeId),
-      });
-
-      if (results) {
-        setPlaceDetails(results);
-      } else {
-        setError("Aucun détail trouvé pour cet endroit.");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchReviews = async () => {
-    try {
-      const response = await fetch(`/api/reviews/${placeId}`);
-      const data = await response.json();
-      setReviews(data);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des avis :", error);
-    }
-  };
-
-  useEffect(() => {
-    if (session?.user) {
-      setCurrentUser(session.user);
-      fetchPlaceDetails();
-      fetchReviews();
-    }
-  }, [session]);
-
-  const handleSubmitReview = async (e: FormEvent) => {
-    e.preventDefault();
-
-    const response = await fetch(`/api/reviews/${placeId}`, {
-      method: editingReviewId ? "PUT" : "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: currentUser?.id,
-        rating,
-        comment,
-      }),
-    });
-
-    if (response.ok) {
-      setRating(0);
-      setComment("");
-      setEditingReviewId(null);
-      fetchReviews();
-    } else {
-      console.error("Erreur lors de la soumission du commentaire :", response);
-    }
-  };
-
-  const handleEditReview = (review: any) => {
-    setRating(review.rating);
-    setComment(review.comment);
-    setEditingReviewId(review.id);
-  };
-
-  useEffect(() => {
-    fetchPlaceDetails();
-    fetchReviews();
-  }, [placeId]);
-
-  const formatTime = (hour: number, minute: number) => {
-    const formattedMinute = minute.toString().padStart(2, "0");
-    return `${hour}:${formattedMinute}`;
-  };
-
-  const renderOpeningHours = (openingHours: any) => {
-    if (!openingHours) return "Horaires d'ouverture non disponibles.";
-
-    return (
-      <div className="text-base space-y-2">
-        <p className="font-semibold">
-          <strong>Ouvert maintenant :</strong>{" "}
-          {openingHours.openNow ? "Oui" : "Non"}
-        </p>
-        <ul className="list-disc ml-6 space-y-1">
-          {openingHours.periods.map((period: any, index: number) => (
-            <li key={index}>
-              <strong>Jour {period.open.day} :</strong>{" "}
-              {formatTime(period.open.hour, period.open.minute)} -{" "}
-              {formatTime(period.close.hour, period.close.minute)}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-2">
-          <strong>Description des jours de la semaine :</strong>{" "}
-          {openingHours.weekdayDescriptions.join(", ")}
-        </p>
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="text-center text-xl font-semibold">
-        Chargement des détails...
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="text-center text-red-500 text-lg">{error}</div>;
-  }
-
-  if (!placeDetails) {
-    return (
-      <div className="text-center text-xl">
-        Aucun détail trouvé pour cet endroit.
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center mt-12 space-y-6">
-      <div className="w-full max-w-4xl p-8 bg-white shadow-lg rounded-lg">
-        <h2 className="text-3xl font-bold mb-6 text-center">
-          {placeDetails.displayName.text}
-        </h2>
-        <div className="rounded-lg overflow-hidden mb-6">
-          <Image
-            src={
-              placeDetails.photos && placeDetails.photos.length > 0
-                ? `https://places.googleapis.com/v1/${placeDetails.photos[0].name}/media?key=${process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY}&maxWidthPx=1000&maxHeightPx=750`
-                : "/placeholder-image.jpg"
-            }
-            alt={placeDetails.displayName.text}
-            className="w-full object-cover"
-            width={1000}
-            height={750}
-          />
-        </div>
-        <div className="space-y-4 text-lg">
-          <p>
-            <strong>Adresse :</strong> {placeDetails.formattedAddress}
-          </p>
-          <p>
-            <strong>Évaluation :</strong>{" "}
-            {placeDetails.rating || "Non disponible"} / 5
-          </p>
-          <p>
-            <strong>Numéro de téléphone :</strong>{" "}
-            {placeDetails.internationalPhoneNumber || "Non disponible"}
-          </p>
-
-          <div>
-            <strong>Horaires d&apos;ouverture :</strong>{" "}
-            {renderOpeningHours(placeDetails.currentOpeningHours)}
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full max-w-4xl p-8 bg-white shadow-lg rounded-lg">
-        <h3 className="text-2xl font-bold mb-4">Avis</h3>
-        {reviews.length === 0 ? (
-          <p className="text-gray-500">Aucun avis pour cet endroit.</p>
-        ) : (
-          <ul className="space-y-4">
-            {reviews.map((review, index) => (
-              <li key={index} className="border-b pb-4 flex items-start gap-4">
-                {review.user.image && (
-                  <Image
-                    src={review.user.image}
-                    alt={`${review.user.firstname} ${review.user.lastname}`}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                )}
-                <div>
-                  <p className="font-bold">
-                    {review.user.firstname} {review.user.lastname}
-                  </p>
-                  <p>
-                    <strong>Note :</strong> {review.rating} / 5
-                  </p>
-                  <p>{review.comment}</p>
-
-                  {currentUser?.id === review.userId && (
-                    <Button
-                      onClick={() => handleEditReview(review)}
-                      className="flex items-center"
-                    >
-                      <Edit className="mr-2" /> Modifier
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="w-full max-w-4xl p-8 bg-white shadow-lg rounded-lg">
-        <h3 className="text-2xl font-bold mb-4">
-          {editingReviewId ? "Modifier votre avis" : "Ajouter un avis"}
-        </h3>
-        <form onSubmit={handleSubmitReview} className="space-y-4">
-          <div>
-            <label htmlFor="rating" className="block font-semibold mb-2">
-              Note (1 à 5) :
-            </label>
-            <input
-              type="number"
-              id="rating"
-              value={rating}
-              onChange={(e) => setRating(Number(e.target.value))}
-              min="1"
-              max="5"
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="comment" className="block font-semibold mb-2">
-              Commentaire :
-            </label>
-            <textarea
-              id="comment"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              rows={4}
-              required
-            ></textarea>
-          </div>
-          <Button type="submit">Envoyer</Button>
-        </form>
-      </div>
-    </div>
-  );
-}
-</file>
-
 <file path="src/app/api/auth/[...nextauth]/route.ts">
 import NextAuth from "next-auth/next";
 import { authOptions } from "@/auth/auth";
@@ -8709,6 +8941,7 @@ export default LoginPage;
 </file>
 
 <file path="src/app/layout.tsx">
+// src/app/layout.tsx
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -8728,8 +8961,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} bg-background text-foreground transition-colors duration-300`}>
         <Providers>
           {children}
           <Toaster />
@@ -9342,6 +9575,201 @@ export const SubmitButton = forwardRef<
 SubmitButton.displayName = "SubmitButton";
 </file>
 
+<file path="src/components/GoogleMap.tsx">
+// src/components/GoogleMap.tsx
+"use client";
+
+import { Wrapper, Status } from "@googlemaps/react-wrapper";
+import { useEffect, useRef, useState } from "react";
+import { PlaceResult } from "@/services/ServiceInterface";
+
+// Types Google Maps (installer @types/google.maps pour de meilleurs types)
+type GoogleMap = any; // google.maps.Map si types installés
+type GoogleMaps = any; // typeof google.maps si types installés
+
+// Coordonnées de l'Égypte (centre approximatif)
+const EGYPT_CENTER = {
+  lat: 26.8206,
+  lng: 30.8025
+};
+
+interface GoogleMapProps {
+  places: PlaceResult[];
+  onMarkerClick?: (place: PlaceResult) => void;
+  className?: string;
+}
+
+interface MapComponentProps extends GoogleMapProps {
+  map: GoogleMap;
+  maps: GoogleMaps;
+}
+
+// Composant Map interne
+function MapComponent({ map, maps, places, onMarkerClick }: MapComponentProps) {
+  const markersRef = useRef<google.maps.Marker[]>([]);
+
+  useEffect(() => {
+    // Supprimer les anciens marqueurs
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+
+    // Ajouter les nouveaux marqueurs
+    places.forEach((place) => {
+      if (place.location) {
+        const marker = new maps.Marker({
+          position: {
+            lat: place.location.latitude,
+            lng: place.location.longitude
+          },
+          map,
+          title: place.displayName?.text || "Lieu"});
+
+        // InfoWindow pour afficher les détails
+        const infoWindow = new maps.InfoWindow({
+          content: `
+            <div class="p-3 max-w-xs">
+              <h3 class="font-bold text-lg mb-2">${place.displayName?.text || "Lieu"}</h3>
+              <p class="text-sm text-gray-600 mb-2">${place.formattedAddress || "Adresse non disponible"}</p>
+              ${place.rating ? `<p class="text-sm"><strong>Note:</strong> ${place.rating}/5</p>` : ""}
+              <button 
+                onclick="window.viewPlaceDetails('${place.id}')"
+                class="mt-2 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+              >
+                Voir les détails
+              </button>
+            </div>
+          `
+        });
+
+        marker.addListener("click", () => {
+          infoWindow.open(map, marker);
+          if (onMarkerClick) {
+            onMarkerClick(place);
+          }
+        });
+
+        markersRef.current.push(marker);
+      }
+    });
+
+    // Ajuster la vue pour inclure tous les marqueurs
+    if (places.length > 0 && markersRef.current.length > 0) {
+      const bounds = new maps.LatLngBounds();
+      markersRef.current.forEach(marker => {
+        const position = marker.getPosition();
+        if (position) {
+          bounds.extend(position);
+        }
+      });
+      map.fitBounds(bounds);
+      
+      // Éviter un zoom trop important
+      const listener = maps.event.addListener(map, "idle", () => {
+        if (map.getZoom()! > 15) map.setZoom(15);
+        maps.event.removeListener(listener);
+      });
+    }
+  }, [places, map, maps, onMarkerClick]);
+
+  return null;
+}
+
+// Hook pour initialiser la carte
+function useMap(ref: React.RefObject<HTMLDivElement>) {
+  const [map, setMap] = useState<GoogleMap>();
+
+  useEffect(() => {
+    if (ref.current && !map && (window as any).google) {
+      const google = (window as any).google;
+      const newMap = new google.maps.Map(ref.current, {
+        center: EGYPT_CENTER,
+        zoom: 6,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        styles: [
+          {
+            featureType: "poi",
+            elementType: "labels",
+            stylers: [{ visibility: "off" }]
+          }
+        ],
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+        zoomControl: true,
+      });
+      setMap(newMap);
+    }
+  }, [ref, map]);
+
+  return map;
+}
+
+// Composant principal de la carte
+function Map({ places, onMarkerClick, className }: GoogleMapProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const map = useMap(ref);
+
+  return (
+    <div className={className}>
+      <div ref={ref} className="w-full h-full rounded-lg shadow-lg" />
+      {map && (window as any).google && (
+        <MapComponent 
+          map={map} 
+          maps={(window as any).google.maps} 
+          places={places} 
+          onMarkerClick={onMarkerClick} 
+        />
+      )}
+    </div>
+  );
+}
+
+// Fonction globale pour gérer les clics sur "Voir les détails"
+if (typeof window !== "undefined") {
+  (window as any).viewPlaceDetails = (placeId: string) => {
+    window.open(`/places/${placeId}`, '_blank');
+  };
+}
+
+// Composant de rendu avec gestion des erreurs
+function GoogleMapRender(props: GoogleMapProps) {
+  const render = (status: Status) => {
+    switch (status) {
+      case Status.LOADING:
+        return (
+          <div className={`${props.className} flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg`}>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-gray-600 dark:text-gray-400">Chargement de la carte...</p>
+            </div>
+          </div>
+        );
+      case Status.FAILURE:
+        return (
+          <div className={`${props.className} flex items-center justify-center bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800`}>
+            <div className="text-center p-4">
+              <p className="text-red-600 dark:text-red-400 mb-2">Erreur lors du chargement de la carte</p>
+              <p className="text-sm text-red-500 dark:text-red-400">Vérifiez votre clé API Google Maps</p>
+            </div>
+          </div>
+        );
+      default:
+        return <Map {...props} />;
+    }
+  };
+
+  return (
+    <Wrapper 
+      apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} 
+      render={render}
+      libraries={["marker"]}
+    />
+  );
+}
+
+export default GoogleMapRender;
+</file>
+
 <file path="src/components/Header.tsx">
 // src/components/Header.tsx - Version avec dark mode
 "use client";
@@ -9539,222 +9967,6 @@ export const CustomCard = ({ className, place, onClick }: CustomCardProps) => {
           </button>
         </div>
       </div>
-    </div>
-  );
-};
-</file>
-
-<file path="src/components/home/Home.tsx">
-// src/components/home/Home.tsx - Version modernisée
-"use client";
-
-import { Navigation } from "@/components/navigation/HomeNav";
-import { Button } from "@/components/ui/button";
-import Container from "@/components/ui/container";
-import { useNavigation } from "@/hooks/useNavigation";
-import { Service } from "@/services/Service";
-import { PlaceResult } from "@/services/ServiceInterface";
-import { useStore } from "@/store/useStore";
-import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, Star, Filter } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { CustomCard } from "./CustomCard";
-
-export const Home = () => {
-  const { navItemsHomePage } = useNavigation();
-  const [query, setQuery] = useState("");
-  const { itemId } = useStore();
-  const router = useRouter();
-
-  const service = useMemo(
-    () => new Service("https://places.googleapis.com", "POST"),
-    []
-  );
-
-  const fetchPlaces = useCallback(async () => {
-    if (itemId === "restaurant") {
-      return service.searchRestaurants({ name: query });
-    } else if (itemId === "hotel") {
-      return service.searchHotels({ name: query });
-    } else {
-      return service.searchRestaurantsAndHotels({ name: query });
-    }
-  }, [itemId, query, service]);
-
-  const {
-    data: places = [],
-    error,
-    isLoading,
-    refetch,
-  } = useQuery<PlaceResult[], Error>({
-    queryKey: ["places", query, itemId],
-    queryFn: fetchPlaces,
-    enabled: false,
-  });
-
-  const handleSubmit = (e?: FormEvent<HTMLFormElement> | React.MouseEvent | React.KeyboardEvent) => {
-    if (e) e.preventDefault();
-    refetch();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSubmit(e);
-    }
-  };
-
-  const handlePlaceClick = (placeId: string) => {
-    router.push(`/places/${placeId}`);
-  };
-
-  useEffect(() => {
-    refetch();
-  }, [refetch, itemId]);
-
-  return (
-    <div className="min-h-screen bg-white dark:bg-gradient-to-br dark:from-slate-950 dark:via-gray-950 dark:to-black transition-all duration-500">
-      {/* Hero Section moderne */}
-      <Container>
-        <div className="text-center py-16">
-          {/* Titre principal avec gradient */}
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 epytogo-gradient-text leading-tight">
-            Découvrez L'Égypte
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Explorez les merveilles de l'Égypte antique. Des pyramides majestueuses aux temples sacrés, 
-            trouvez les meilleurs restaurants et hôtels pour votre voyage inoubliable.
-          </p>
-
-          {/* Navigation moderne */}
-          <div className="flex justify-center gap-2 p-6">
-            {navItemsHomePage.map((item) => (
-              <button
-                key={item.id}
-                className={`
-                  flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all duration-300
-                  transform hover:scale-105 hover:shadow-lg
-                  ${item.id === itemId 
-                    ? 'epytogo-gradient text-gray-900 shadow-xl' 
-                    : 'bg-gray-100 dark:bg-white/5 backdrop-blur-sm text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10'
-                  }
-                `}
-                onClick={item.handleClick}
-              >
-                {item.icon}
-                <span className="hidden md:inline">{item.name}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Barre de recherche moderne */}
-          <div className="max-w-4xl mx-auto mt-8">
-            <div className="relative">
-              <div className="relative bg-white/95 dark:bg-white/5 backdrop-blur-xl rounded-3xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-2xl">
-                <div className="flex items-center">
-                  <Search className="absolute left-6 w-6 h-6 text-gray-500 dark:text-gray-500" />
-                  <input
-                    className="w-full h-16 pl-16 pr-40 bg-transparent text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-500 text-lg focus:outline-none"
-                    name="search"
-                    placeholder="Rechercher un restaurant, un hôtel..."
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                  />
-                  <button 
-                    onClick={handleSubmit}
-                    className="absolute right-2 h-12 px-8 epytogo-gradient text-gray-900 font-semibold rounded-2xl hover:shadow-lg transition-all duration-300 transform hover:scale-105"
-                  >
-                    Rechercher
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Suggestions populaires */}
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              {['Pyramides de Gizeh', 'Temple de Karnak', 'Vallée des Rois', 'Alexandrie'].map((suggestion) => (
-                <button 
-                  key={suggestion}
-                  className="px-4 py-2 bg-gray-100 dark:bg-white/5 backdrop-blur-sm text-gray-600 dark:text-gray-400 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-300 border border-gray-200 dark:border-white/10"
-                  onClick={() => setQuery(suggestion)}
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Section des résultats */}
-        <div className="pb-16">
-          {error && (
-            <div className="mb-8 p-4 bg-red-500/10 dark:bg-red-500/20 border border-red-500/20 dark:border-red-500/30 rounded-xl text-red-400 dark:text-red-300 text-center">
-              {error.message}
-            </div>
-          )}
-
-          {places.length > 0 && (
-            <div className="mb-8 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Résultats de recherche ({places.length})
-              </h2>
-              <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-white/5 backdrop-blur-sm text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-300 border border-gray-200 dark:border-white/10">
-                <Filter className="w-4 h-4" />
-                Filtres
-              </button>
-            </div>
-          )}
-          
-          <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 px-4 md:px-0">
-            {isLoading
-              ? Array.from({ length: 6 }).map((_, index) => (
-                  <div key={index} className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden animate-pulse border border-gray-100 dark:border-slate-700">
-                    <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800"></div>
-                    <div className="p-6">
-                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-lg mb-2"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 w-3/4"></div>
-                      <div className="flex justify-between">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/3"></div>
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/4"></div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              : places.map((place) => (
-                  <CustomCard
-                    key={place.id}
-                    className="min-h-[300px] w-full"
-                    place={{
-                      placeId: place.id,
-                      name: place.displayName.text,
-                      address: place.formattedAddress,
-                      rating: place.rating || 0,
-                      photo: place.photos?.[0]?.name,
-                      phoneNumber: place.internationalPhoneNumber,
-                      isOpen: place.currentOpeningHours?.openNow
-                    }}
-                    onClick={() => handlePlaceClick(place.id)}
-                  />
-                ))
-            }
-          </div>
-
-          {/* Message d'état vide */}
-          {!isLoading && places.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-24 h-24 bg-gradient-to-br from-yellow-400/20 to-orange-400/20 dark:from-yellow-400/10 dark:to-orange-400/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-yellow-200 dark:border-yellow-400/20">
-                <Search className="w-12 h-12 text-yellow-600 dark:text-yellow-300" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Commencez votre exploration</h3>
-              <p className="text-gray-600 dark:text-gray-500 max-w-md mx-auto">
-                Utilisez la barre de recherche ci-dessus pour découvrir les meilleurs restaurants et hôtels d'Égypte.
-              </p>
-            </div>
-          )}
-        </div>
-      </Container>
     </div>
   );
 };
@@ -12296,7 +12508,6 @@ export const Providers = ({ children }: Readonly<React.PropsWithChildren>) => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="system">
           {children}
-          <ReactQueryDevtools initialIsOpen={false} />
         </ThemeProvider>
       </QueryClientProvider>
     </SessionProvider>
@@ -12399,250 +12610,6 @@ export function useTheme() {
 export { useTheme as useThemeHook } from "@/providers/ThemeProvider";
 </file>
 
-<file path="src/services/PlacesImageService.ts">
-// src/services/PlacesImageService.ts
-export class PlacesImageService {
-  private static readonly BASE_URL = "https://places.googleapis.com/v1";
-  private static readonly API_KEY = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
-
-  /**
-   * Construit l'URL pour récupérer une image de lieu Google Places
-   */
-  static getImageUrl(
-    photoName: string,
-    options: {
-      maxWidth?: number;
-      maxHeight?: number;
-    } = {}
-  ): string {
-    const { maxWidth = 400, maxHeight = 400 } = options;
-    
-    if (!this.API_KEY) {
-      console.warn("Google Places API key is missing");
-      return "";
-    }
-
-    return `${this.BASE_URL}/${photoName}/media?maxHeightPx=${maxHeight}&maxWidthPx=${maxWidth}&key=${this.API_KEY}`;
-  }
-
-  /**
-   * Vérifie si une photo est disponible
-   */
-  static hasPhoto(place: { photos?: Array<{ name: string }> }): boolean {
-    return !!(place.photos && place.photos.length > 0 && place.photos[0].name);
-  }
-
-  /**
-   * Obtient le nom de la première photo disponible
-   */
-  static getFirstPhotoName(place: { photos?: Array<{ name: string }> }): string | undefined {
-    return this.hasPhoto(place) ? place.photos![0].name : undefined;
-  }
-
-  /**
-   * Précharge une image pour améliorer les performances
-   */
-  static preloadImage(photoName: string, options?: { maxWidth?: number; maxHeight?: number }): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error(`Failed to load image: ${photoName}`));
-      img.src = this.getImageUrl(photoName, options);
-    });
-  }
-}
-</file>
-
-<file path="src/services/Service.ts">
-// src/services/Service.ts - Version simple avec limite modifiable
-import { PlaceResult, ServiceInterface } from "./ServiceInterface";
-
-type Method = "GET" | "POST" | "PUT" | "DELETE";
-
-export class Service implements ServiceInterface {
-  apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "";
-
-  // 🔧 MODIFICATION SIMPLE : Change cette valeur pour ajuster la limite
-  private maxResults = 1; // ← Change à 40 pour la présentation
-
-  constructor(public baseUrl: string, public method: Method) {
-    this.baseUrl = baseUrl;
-    this.method = method;
-  }
-
-  async searchByText({
-    query,
-    type,
-    name = "",
-  }: {
-    query: string;
-    type: string;
-    name?: string;
-  }): Promise<PlaceResult[]> {
-    let textQuery = `${type} in ${query}`;
-
-    if (name) {
-      textQuery = `${name} ${type} in ${query}`;
-    }
-
-    const url = `${this.baseUrl}/v1/places:searchText`;
-    const body = JSON.stringify({
-      textQuery,
-      includedType: type,
-      maxResultCount: this.maxResults, // ← Utilise la limite définie
-    });
-
-    const requestHeaders = new Headers();
-    requestHeaders.set("Content-Type", "application/json");
-    requestHeaders.set("X-Goog-Api-Key", this.apiKey);
-    requestHeaders.set(
-      "X-Goog-FieldMask",
-      "places.displayName,places.formattedAddress,places.location,places.rating,places.photos,places.currentOpeningHours,places.internationalPhoneNumber,places.id"
-    );
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: requestHeaders,
-      body: body,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result.places || [];
-  }
-
-  async searchRestaurants({
-    name = "",
-  }: {
-    name?: string;
-  }): Promise<PlaceResult[]> {
-    return this.searchByText({
-      query: "Egypt",
-      type: "restaurant",
-      name,
-    });
-  }
-
-  async searchHotels({ name = "" }: { name?: string }): Promise<PlaceResult[]> {
-    return this.searchByText({
-      query: "Egypt",
-      type: "lodging",
-      name,
-    });
-  }
-
-  async searchRestaurantsAndHotels({
-    name = "",
-  }: {
-    name?: string;
-  }): Promise<PlaceResult[]> {
-    const restaurants = await this.searchRestaurants({
-      name,
-    });
-
-    const hotels = await this.searchHotels({
-      name,
-    });
-
-    return [...restaurants, ...hotels];
-  }
-
-  async searchById({ placeId }: { placeId: string }): Promise<PlaceResult> {
-    const url = `${this.baseUrl}/v1/places/${placeId}`;
-    const requestHeaders = new Headers();
-    requestHeaders.set("Content-Type", "application/json");
-    requestHeaders.set("X-Goog-Api-Key", this.apiKey);
-    requestHeaders.set(
-      "X-Goog-FieldMask",
-      "id,displayName,photos,formattedAddress,rating,internationalPhoneNumber,currentOpeningHours"
-    );
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: requestHeaders,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result;
-  }
-}
-</file>
-
-<file path="src/services/ServiceInterface.ts">
-// src/services/ServiceInterface.ts - Version nettoyée
-export interface PlaceResult {
-  id: string;
-  displayName: {
-    text: string;
-    languageCode: string;
-  };
-  formattedAddress: string;
-  internationalPhoneNumber: string;
-  currentOpeningHours: {
-    openNow: boolean;
-    periods: Array<{
-      open: {
-        date: { year: number; month: number; day: number };
-        day: number;
-        hour: number;
-        minute: number;
-      };
-      close: {
-        date: { year: number; month: number; day: number };
-        day: number;
-        hour: number;
-        minute: number;
-      };
-    }>;
-    weekdayDescriptions: Array<string>;
-  };
-  location: {
-    latitude: number;
-    longitude: number;
-  };
-  rating?: number;
-  photos?: Array<{
-    name: string;
-    authorAttributions: Array<{
-      displayName: string;
-      photoUri: string;
-      uri: string;
-    }>;
-  }>;
-}
-
-export interface ServiceInterface {
-  searchByText(params: {
-    query: string;
-    type: string;
-    name?: string;
-  }): Promise<PlaceResult[]>;
-  
-  searchRestaurants(params: { 
-    name?: string;
-  }): Promise<PlaceResult[]>;
-  
-  searchHotels(params: { 
-    name?: string;
-  }): Promise<PlaceResult[]>;
-  
-  searchRestaurantsAndHotels(params: { 
-    name?: string;
-  }): Promise<PlaceResult[]>;
-  
-  searchById(params: { 
-    placeId: string;
-  }): Promise<PlaceResult>;
-}
-</file>
-
 <file path="src/store/useStore.ts">
 import { ItemId } from "@/components/navigation/types";
 import { RegisterPayload } from "@/validators/registerSchema";
@@ -12705,6 +12672,41 @@ declare global {
       readonly SMTP_PASS: string;
     }
   }
+}
+</file>
+
+<file path="src/utils/placeAdapter.ts">
+// src/utils/placeAdapter.ts
+import { PlaceResult } from "@/services/ServiceInterface";
+import { PlacesImageService } from "@/services/PlacesImageService";
+
+// Interface attendue par CustomCard
+export interface CustomCardPlace {
+  placeId: string;
+  name: string;
+  address: string;
+  rating: number;
+  photo?: string;
+  phoneNumber?: string;
+  isOpen?: boolean;
+}
+
+// Fonction pour convertir PlaceResult en CustomCardPlace
+export function adaptPlaceForCard(place: PlaceResult): CustomCardPlace {
+  return {
+    placeId: place.id || '',
+    name: place.displayName?.text || 'Nom non disponible',
+    address: place.formattedAddress || 'Adresse non disponible',
+    rating: place.rating || 0,
+    photo: PlacesImageService.getPlaceImageUrl(place, { maxWidth: 400, maxHeight: 300 }),
+    phoneNumber: place.internationalPhoneNumber || undefined,
+    isOpen: place.currentOpeningHours?.openNow || undefined
+  };
+}
+
+// Fonction pour convertir un tableau de PlaceResult
+export function adaptPlacesForCards(places: PlaceResult[]): CustomCardPlace[] {
+  return places.map(adaptPlaceForCard);
 }
 </file>
 
@@ -12927,6 +12929,1143 @@ export default config;
   "exclude": [
     "node_modules"
   ]
+}
+</file>
+
+<file path=".env.example">
+# MongoDB pour Prisma
+DATABASE_URL="mongodb+srv:connexion"
+
+# Obligatoire pour NextAuth (utilisé pour signer les tokens internes)
+NEXTAUTH_SECRET="api_key"
+
+# Utilisé si tu signes tes propres JWT en plus (facultatif si tu n’utilises que NextAuth)
+JWT_SECRET="api_key"
+
+# Utilisé côté server & Vercel pour rediriger les callbacks OAuth, emails, etc.
+NEXTAUTH_URL="http://localhost:3000"
+
+RESEND_API_KEY=re_api_key
+
+FROM_EMAIL="onboarding@resend.dev"
+
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY="api_key"
+
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=ta_cle_google_maps
+
+NEXT_PUBLIC_GEMINI_API_KEY=sk-ant-api03-ton-api-key-claude
+</file>
+
+<file path="package.json">
+{
+  "name": "epytogo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "email": "email dev"
+  },
+  "dependencies": {
+    "@googlemaps/react-wrapper": "^1.2.0",
+    "@hookform/resolvers": "^3.9.0",
+    "@prisma/client": "^5.19.1",
+    "@radix-ui/react-checkbox": "^1.1.1",
+    "@radix-ui/react-dialog": "^1.1.1",
+    "@radix-ui/react-toast": "^1.2.1",
+    "@radix-ui/react-tooltip": "^1.1.2",
+    "@react-email/components": "0.0.25",
+    "@react-email/tailwind": "0.1.0",
+    "@tanstack/react-query": "^5.55.4",
+    "@tanstack/react-query-devtools": "^5.55.4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/pug": "^2.0.10",
+    "add": "2.0.6",
+    "bcryptjs": "^2.4.3",
+    "check-password-strength": "^2.0.10",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "embla-carousel-autoplay": "^8.2.1",
+    "embla-carousel-react": "^8.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.439.0",
+    "next": "14.2.9",
+    "next-auth": "^4.24.7",
+    "prisma": "^5.19.1",
+    "pug": "^3.0.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-email": "^3.0.1",
+    "react-hook-form": "^7.53.0",
+    "resend": "^4.0.0",
+    "tailwind-merge": "^2.5.2",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.23.8",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/google.maps": "^3.58.1",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="src/app/(home)/places/[placeId]/page.tsx">
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Service } from "@/services/Service";
+import { PlaceResult } from "@/services/ServiceInterface";
+import { useStore } from "@/store/useStore";
+import { Edit } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Image from "next/image";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { PlacesImageService } from "@/services/PlacesImageService";
+
+export default function Page({ params }: { params: { placeId: string } }) {
+  const { placeId } = params;
+
+  const [placeDetails, setPlaceDetails] = useState<PlaceResult | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [rating, setRating] = useState<number>(0);
+  const [comment, setComment] = useState<string>("");
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+
+  const { data: session } = useSession();
+  const { currentUser, setCurrentUser } = useStore();
+
+  const service = useMemo(
+    () => new Service("https://places.googleapis.com", "POST"),
+    []
+  );
+
+  const fetchPlaceDetails = async () => {
+    if (!placeId) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const results = await service.searchById({
+        placeId: String(placeId),
+      });
+
+      if (results) {
+        setPlaceDetails(results);
+      } else {
+        setError("Aucun détail trouvé pour cet endroit.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const response = await fetch(`/api/reviews/${placeId}`);
+      const data = await response.json();
+      setReviews(data);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des avis :", error);
+    }
+  };
+
+  useEffect(() => {
+    if (session?.user) {
+      setCurrentUser(session.user);
+      fetchPlaceDetails();
+      fetchReviews();
+    }
+  }, [session]);
+
+  const handleSubmitReview = async (e: FormEvent) => {
+    e.preventDefault();
+
+    const response = await fetch(`/api/reviews/${placeId}`, {
+      method: editingReviewId ? "PUT" : "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: currentUser?.id,
+        rating,
+        comment,
+      }),
+    });
+
+    if (response.ok) {
+      setRating(0);
+      setComment("");
+      setEditingReviewId(null);
+      fetchReviews();
+    } else {
+      console.error("Erreur lors de la soumission du commentaire :", response);
+    }
+  };
+
+  const handleEditReview = (review: any) => {
+    setRating(review.rating);
+    setComment(review.comment);
+    setEditingReviewId(review.id);
+  };
+
+  useEffect(() => {
+    fetchPlaceDetails();
+    fetchReviews();
+  }, [placeId]);
+
+  const formatTime = (hour: number, minute: number) => {
+    const formattedMinute = minute.toString().padStart(2, "0");
+    return `${hour}:${formattedMinute}`;
+  };
+
+  const renderOpeningHours = (openingHours: any) => {
+    if (!openingHours) return <span className="text-gray-600 dark:text-gray-400">Horaires d'ouverture non disponibles.</span>;
+
+    return (
+      <div className="text-base space-y-2 text-gray-700 dark:text-gray-300">
+        <p className="font-semibold">
+          <strong className="text-gray-900 dark:text-white">Ouvert maintenant :</strong>{" "}
+          <span className={`font-semibold ${openingHours.openNow ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            {openingHours.openNow ? "Oui" : "Non"}
+          </span>
+        </p>
+        <ul className="list-disc ml-6 space-y-1">
+          {openingHours.periods.map((period: any, index: number) => (
+            <li key={index}>
+              <strong className="text-gray-900 dark:text-white">Jour {period.open.day} :</strong>{" "}
+              {formatTime(period.open.hour, period.open.minute)} -{" "}
+              {formatTime(period.close.hour, period.close.minute)}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2">
+          <strong className="text-gray-900 dark:text-white">Description des jours de la semaine :</strong>{" "}
+          {openingHours.weekdayDescriptions.join(", ")}
+        </p>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center transition-colors duration-300">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <div className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+            Chargement des détails...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center transition-colors duration-300">
+        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="text-red-500 dark:text-red-400 text-lg font-semibold">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!placeDetails) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center transition-colors duration-300">
+        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="text-xl text-gray-700 dark:text-gray-300">
+            Aucun détail trouvé pour cet endroit.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <div className="flex flex-col items-center pt-12 pb-8 space-y-6 px-4">
+        {/* Détails du lieu */}
+        <div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <h2 className="text-3xl font-bold mb-6 text-center text-gray-900 dark:text-white">
+            {placeDetails.displayName.text}
+          </h2>
+          <div className="rounded-lg overflow-hidden mb-6 shadow-md">
+            <Image
+              src={PlacesImageService.getPlaceImageUrl(placeDetails, { maxWidth: 1000, maxHeight: 750 })}
+              alt={placeDetails.displayName.text}
+              className="w-full object-cover"
+              width={1000}
+              height={750}
+            />
+          </div>
+          <div className="space-y-4 text-lg text-gray-700 dark:text-gray-300">
+            <div>
+              <strong className="text-gray-900 dark:text-white">Adresse :</strong>{" "}
+              <a 
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(placeDetails.formattedAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors duration-200 inline-flex items-center gap-1"
+              >
+                {placeDetails.formattedAddress}
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+              <span className="block text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Cliquez pour obtenir un itinéraire
+              </span>
+            </div>
+            <p>
+              <strong className="text-gray-900 dark:text-white">Évaluation :</strong>{" "}
+              <span className="text-yellow-600 dark:text-yellow-400 font-semibold">
+                {placeDetails.rating || "Non disponible"} / 5
+              </span>
+            </p>
+            <p>
+              <strong className="text-gray-900 dark:text-white">Numéro de téléphone :</strong>{" "}
+              {placeDetails.internationalPhoneNumber || "Non disponible"}
+            </p>
+
+            <div>
+              <strong className="text-gray-900 dark:text-white">Horaires d&apos;ouverture :</strong>{" "}
+              <div className="mt-2">
+                {renderOpeningHours(placeDetails.currentOpeningHours)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section des avis */}
+        <div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Avis</h3>
+          {reviews.length === 0 ? (
+            <p className="text-gray-600 dark:text-gray-400">Aucun avis pour cet endroit.</p>
+          ) : (
+            <ul className="space-y-4">
+              {reviews.map((review, index) => (
+                <li key={index} className="border-b border-gray-200 dark:border-gray-700 pb-4 flex items-start gap-4">
+                  {review.user.image && (
+                    <Image
+                      src={review.user.image}
+                      alt={`${review.user.firstname} ${review.user.lastname}`}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                      width={48}
+                      height={48}
+                    />
+                  )}
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900 dark:text-white">
+                      {review.user.firstname} {review.user.lastname}
+                    </p>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      <strong className="text-gray-900 dark:text-white">Note :</strong>{" "}
+                      <span className="text-yellow-600 dark:text-yellow-400 font-semibold">
+                        {review.rating} / 5
+                      </span>
+                    </p>
+                    <p className="text-gray-700 dark:text-gray-300 mt-1">{review.comment}</p>
+
+                    {currentUser?.id === review.userId && (
+                      <Button
+                        onClick={() => handleEditReview(review)}
+                        className="flex items-center mt-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
+                        size="sm"
+                      >
+                        <Edit className="mr-2 h-4 w-4" /> Modifier
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Formulaire d'ajout d'avis */}
+        <div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+            {editingReviewId ? "Modifier votre avis" : "Ajouter un avis"}
+          </h3>
+          <form onSubmit={handleSubmitReview} className="space-y-4">
+            <div>
+              <label htmlFor="rating" className="block font-semibold mb-2 text-gray-900 dark:text-white">
+                Note (1 à 5) :
+              </label>
+              <input
+                type="number"
+                id="rating"
+                value={rating}
+                onChange={(e) => setRating(Number(e.target.value))}
+                min="1"
+                max="5"
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="comment" className="block font-semibold mb-2 text-gray-900 dark:text-white">
+                Commentaire :
+              </label>
+              <textarea
+                id="comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                rows={4}
+                placeholder="Partagez votre expérience..."
+                required
+              ></textarea>
+            </div>
+            <Button 
+              type="submit" 
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-semibold px-6 py-2"
+            >
+              {editingReviewId ? "Modifier l'avis" : "Envoyer l'avis"}
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/components/home/Home.tsx">
+// src/components/home/Home.tsx (mise à jour)
+"use client";
+
+import { Service } from "@/services/Service";
+import { PlaceResult } from "@/services/ServiceInterface";
+import { useStore } from "@/store/useStore";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { CustomCard } from "./CustomCard";
+import { SkeletonCard } from "./SkeletonCard";
+import GoogleMapRender from "../GoogleMap";
+import { Button } from "../ui/button";
+import { Search, Map, Grid, Filter } from "lucide-react";
+import { adaptPlacesForCards } from "@/utils/placeAdapter";
+import TravelChatbot from "../TravelChatbot";
+
+export function Home() {
+  const [places, setPlaces] = useState<PlaceResult[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [query, setQuery] = useState<string>("");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [showMap, setShowMap] = useState<boolean>(false);
+  const [filteredPlaces, setFilteredPlaces] = useState<PlaceResult[]>([]);
+
+  const { data: session } = useSession();
+  const { currentUser, setCurrentUser } = useStore();
+  const router = useRouter();
+
+  const service = useMemo(
+    () => new Service("https://places.googleapis.com", "POST"),
+    []
+  );
+
+  // Charger les lieux populaires d'Égypte au démarrage
+  useEffect(() => {
+    if (session?.user) {
+      setCurrentUser(session.user);
+    }
+    // Charger les lieux populaires même sans utilisateur connecté
+    loadPopularPlaces();
+  }, [session]);
+
+  // Fonction pour calculer le nombre max de résultats selon les filtres
+  const getMaxResults = () => {
+    const selectedCount = selectedTypes.length;
+    if (selectedCount === 0) return 8; // Par défaut
+    if (selectedCount === 1) return 2; // 2 si un seul type
+    if (selectedCount === 2) return 4; // 4 si deux types
+    return 6; // 6 si trois types ou plus
+  };
+
+  const loadPopularPlaces = async () => {
+    setLoading(true);
+    try {
+      const maxResults = getMaxResults();
+      
+      // Recherche de lieux populaires en Égypte
+      const results = await service.searchText({
+        textQuery: "best restaurants hotels attractions Egypt Cairo Alexandria Luxor",
+        languageCode: "fr",
+        maxResultCount: maxResults,
+      });
+
+      if (results.places && results.places.length > 0) {
+        setPlaces(results.places);
+        setFilteredPlaces(results.places);
+      } else {
+        // Fallback avec searchNearby si searchText ne donne rien
+        const nearbyResults = await service.searchNearby({
+          locationRestriction: {
+            circle: {
+              center: { latitude: 26.8206, longitude: 30.8025 },
+              radius: 500000
+            }
+          },
+          includedTypes: ["restaurant", "lodging", "tourist_attraction"],
+          maxResultCount: maxResults,
+          languageCode: "fr",
+        });
+        
+        if (nearbyResults.places && nearbyResults.places.length > 0) {
+          setPlaces(nearbyResults.places);
+          setFilteredPlaces(nearbyResults.places);
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des lieux :", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    setLoading(true);
+    try {
+      const maxResults = getMaxResults();
+      
+      const results = await service.searchText({
+        textQuery: `${query} Égypte`,
+        languageCode: "fr",
+        maxResultCount: maxResults,
+      });
+
+      if (results.places && results.places.length > 0) {
+        const newPlaces = results.places;
+        setPlaces(newPlaces);
+        applyFilters(newPlaces);
+      } else {
+        // Aucun résultat trouvé
+        setPlaces([]);
+        setFilteredPlaces([]);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la recherche :", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = (placesToFilter: PlaceResult[] = places) => {
+    let filtered = placesToFilter;
+
+    if (selectedTypes.length > 0) {
+      filtered = placesToFilter.filter(place =>
+        place.types?.some(type => selectedTypes.includes(type))
+      );
+    }
+
+    setFilteredPlaces(filtered);
+  };
+
+  const handleTypeFilter = (type: string) => {
+    const newSelectedTypes = selectedTypes.includes(type)
+      ? selectedTypes.filter(t => t !== type)
+      : [...selectedTypes, type];
+    
+    setSelectedTypes(newSelectedTypes);
+    
+    // Appliquer les filtres
+    let filtered = places;
+    if (newSelectedTypes.length > 0) {
+      filtered = places.filter(place =>
+        place.types?.some(t => newSelectedTypes.includes(t))
+      );
+    }
+    setFilteredPlaces(filtered);
+  };
+
+  const handleMarkerClick = (place: PlaceResult) => {
+    // Optionnel : comportement lors du clic sur un marqueur
+    console.log("Marqueur cliqué :", place.displayName?.text);
+  };
+
+  const handleChatbotRecommendation = (recommendations: any) => {
+    // Optionnel : Mise à jour de la recherche basée sur les recommandations du chatbot
+    console.log('Recommandations du chatbot:', recommendations);
+    
+    // Tu peux ici déclencher une recherche basée sur la localisation recommandée
+    // Par exemple : searchByLocation(recommendations.location);
+  };
+
+  const getTypeLabel = (type: string) => {
+    const labels: { [key: string]: string } = {
+      restaurant: "🍽️ Restaurants",
+      lodging: "🏨 Hôtels", 
+      tourist_attraction: "🏛️ Attractions"
+    };
+    return labels[type] || type;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <div className="container mx-auto px-4 py-8">
+        {/* En-tête avec recherche */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Découvrez l'Égypte 🇪🇬
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+            Restaurants 🍽️, hôtels 🏨 et attractions touristiques 🏛️
+          </p>
+
+          {/* Barre de recherche */}
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-6">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher des restaurants, hôtels..."
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {loading ? "..." : "Rechercher"}
+              </Button>
+            </div>
+          </form>
+
+          {/* Filtres et contrôles d'affichage */}
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
+            {/* Filtres par type */}
+            <div className="flex gap-2">
+              <span className="flex items-center text-gray-600 dark:text-gray-400">
+                <Filter className="h-4 w-4 mr-1" />
+                Filtres :
+              </span>
+              {["restaurant", "lodging", "tourist_attraction"].map(type => (
+                <Button
+                  key={type}
+                  variant={selectedTypes.includes(type) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleTypeFilter(type)}
+                  className="text-sm"
+                >
+                  {getTypeLabel(type)}
+                </Button>
+              ))}
+            </div>
+
+            {/* Bouton carte/grille */}
+            <Button
+              variant="outline"
+              onClick={() => setShowMap(!showMap)}
+              className="flex items-center gap-2"
+            >
+              {showMap ? (
+                <>
+                  <Grid className="h-4 w-4" />
+                  Vue Grille
+                </>
+              ) : (
+                <>
+                  <Map className="h-4 w-4" />
+                  Vue Carte
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Affichage conditionnel : Carte ou Grille */}
+        {showMap ? (
+          <div className="mb-8">
+            <GoogleMapRender
+              places={filteredPlaces}
+              onMarkerClick={handleMarkerClick}
+              className="w-full h-96 lg:h-[500px]"
+            />
+            <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">
+              {filteredPlaces.length} lieu(x) affiché(s) sur la carte
+              {selectedTypes.length > 0 && (
+                <span className="ml-2 text-blue-600 dark:text-blue-400">
+                  • Max {getMaxResults()} résultats selon filtres
+                </span>
+              )}
+            </p>
+          </div>
+        ) : null}
+
+        {/* Grille des résultats */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+              {query ? `Résultats pour "${query}"` : "Lieux populaires"}
+            </h2>
+            <span className="text-gray-600 dark:text-gray-400">
+              {filteredPlaces.length} résultat(s)
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <SkeletonCard key={index} />
+              ))}
+            </div>
+          ) : filteredPlaces.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {adaptPlacesForCards(filteredPlaces).map((place, index) => (
+                <CustomCard 
+                  key={`${place.placeId}-${index}`} 
+                  place={place}
+                  onClick={() => {
+                    // Navigation vers la page de détails du lieu avec Next.js router
+                    router.push(`/places/${place.placeId}`);
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-gray-500 dark:text-gray-400 text-lg">
+                {query ? "Aucun résultat trouvé" : "Aucun lieu disponible"}
+              </div>
+              {query && (
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                  Essayez avec d'autres mots-clés
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Chatbot de recommandations */}
+      <TravelChatbot onRecommendation={handleChatbotRecommendation} />
+    </div>
+  );
+}
+</file>
+
+<file path="src/services/PlacesImageService.ts">
+// src/services/PlacesImageService.ts
+export class PlacesImageService {
+  private static readonly BASE_URL = "https://places.googleapis.com/v1";
+  private static readonly API_KEY = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
+
+  /**
+   * Construit l'URL pour récupérer une image de lieu Google Places
+   */
+  static getImageUrl(
+    photoName: string,
+    options: {
+      maxWidth?: number;
+      maxHeight?: number;
+    } = {}
+  ): string {
+    const { maxWidth = 400, maxHeight = 400 } = options;
+    
+    if (!this.API_KEY) {
+      console.warn("Google Places API key is missing");
+      return "/placeholder-image.svg";
+    }
+
+    if (!photoName) {
+      return "/placeholder-image.svg";
+    }
+
+    // 🔧 CORRECTION : Nettoyer le photoName pour éviter les doublons
+    let cleanPhotoName = photoName;
+    
+    // Si le photoName contient déjà l'URL complète, extraire juste la partie nécessaire
+    if (photoName.startsWith('https://places.googleapis.com/v1/')) {
+      cleanPhotoName = photoName.replace('https://places.googleapis.com/v1/', '');
+    }
+    
+    // Supprimer "/media" et ses paramètres s'ils sont déjà présents
+    if (cleanPhotoName.includes('/media')) {
+      cleanPhotoName = cleanPhotoName.split('/media')[0];
+    }
+    
+    // S'assurer qu'on a le bon format
+    if (!cleanPhotoName.startsWith('places/')) {
+      cleanPhotoName = `places/${cleanPhotoName}`;
+    }
+
+    const imageUrl = `${this.BASE_URL}/${cleanPhotoName}/media?maxHeightPx=${maxHeight}&maxWidthPx=${maxWidth}&key=${this.API_KEY}`;
+    
+    // Debug pour voir l'URL générée
+    console.log('PlacesImageService - Original photoName:', photoName);
+    console.log('PlacesImageService - Clean photoName:', cleanPhotoName);
+    console.log('PlacesImageService - Generated URL:', imageUrl);
+    
+    return imageUrl;
+  }
+
+  /**
+   * Récupère l'URL de la première photo d'un lieu avec fallback
+   */
+  static getPlaceImageUrl(
+    place: { photos?: Array<{ name: string }> }, 
+    options: { maxWidth?: number; maxHeight?: number } = {}
+  ): string {
+    if (!this.hasPhoto(place)) {
+      return "/placeholder-image.svg";
+    }
+    
+    const photoName = this.getFirstPhotoName(place);
+    if (!photoName) {
+      return "/placeholder-image.svg";
+    }
+    
+    return this.getImageUrl(photoName, options);
+  }
+
+  /**
+   * Vérifie si une photo est disponible
+   */
+  static hasPhoto(place: { photos?: Array<{ name: string }> }): boolean {
+    return !!(place.photos && place.photos.length > 0 && place.photos[0].name);
+  }
+
+  /**
+   * Obtient le nom de la première photo disponible
+   */
+  static getFirstPhotoName(place: { photos?: Array<{ name: string }> }): string | undefined {
+    return this.hasPhoto(place) ? place.photos![0].name : undefined;
+  }
+
+  /**
+   * Précharge une image pour améliorer les performances
+   */
+  static preloadImage(photoName: string, options?: { maxWidth?: number; maxHeight?: number }): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error(`Failed to load image: ${photoName}`));
+      img.src = this.getImageUrl(photoName, options);
+    });
+  }
+}
+</file>
+
+<file path="src/services/Service.ts">
+// src/services/Service.ts - Version complète avec nouvelles méthodes
+import { 
+  PlaceResult, 
+  ServiceInterface, 
+  SearchNearbyParams, 
+  SearchTextParams, 
+  GooglePlacesResponse 
+} from "./ServiceInterface";
+
+type Method = "GET" | "POST" | "PUT" | "DELETE";
+
+export class Service implements ServiceInterface {
+  apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "";
+
+  private maxResults = 1; // ← Change à 40 pour la présentation
+
+  constructor(public baseUrl: string, public method: Method) {
+    this.baseUrl = baseUrl;
+    this.method = method;
+  }
+
+  // 🆕 Nouvelle méthode : Recherche par proximité pour la carte
+  async searchNearby(params: SearchNearbyParams): Promise<GooglePlacesResponse> {
+    const url = `${this.baseUrl}/v1/places:searchNearby`;
+    
+    const body = JSON.stringify({
+      locationRestriction: params.locationRestriction,
+      includedTypes: params.includedTypes,
+      maxResultCount: Math.min(params.maxResultCount, 20), // Google limite à 20
+      languageCode: params.languageCode,
+    });
+
+    const requestHeaders = new Headers();
+    requestHeaders.set("Content-Type", "application/json");
+    requestHeaders.set("X-Goog-Api-Key", this.apiKey);
+    requestHeaders.set(
+      "X-Goog-FieldMask",
+      "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.photos,places.types,places.currentOpeningHours,places.internationalPhoneNumber"
+    );
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: requestHeaders,
+      body: body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return {
+      places: result.places || []
+    };
+  }
+
+  // 🆕 Nouvelle méthode : Recherche par texte pour la carte
+  async searchText(params: SearchTextParams): Promise<GooglePlacesResponse> {
+    const url = `${this.baseUrl}/v1/places:searchText`;
+    
+    const body = JSON.stringify({
+      textQuery: params.textQuery,
+      maxResultCount: Math.min(params.maxResultCount, 20), // Google limite à 20
+      languageCode: params.languageCode,
+    });
+
+    const requestHeaders = new Headers();
+    requestHeaders.set("Content-Type", "application/json");
+    requestHeaders.set("X-Goog-Api-Key", this.apiKey);
+    requestHeaders.set(
+      "X-Goog-FieldMask",
+      "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.photos,places.types,places.currentOpeningHours,places.internationalPhoneNumber"
+    );
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: requestHeaders,
+      body: body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return {
+      places: result.places || []
+    };
+  }
+
+  // Méthodes existantes (inchangées)
+  async searchByText({
+    query,
+    type,
+    name = "",
+  }: {
+    query: string;
+    type: string;
+    name?: string;
+  }): Promise<PlaceResult[]> {
+    let textQuery = `${type} in ${query}`;
+
+    if (name) {
+      textQuery = `${name} ${type} in ${query}`;
+    }
+
+    const url = `${this.baseUrl}/v1/places:searchText`;
+    const body = JSON.stringify({
+      textQuery,
+      includedType: type,
+      maxResultCount: this.maxResults, // ← Utilise la limite définie
+    });
+
+    const requestHeaders = new Headers();
+    requestHeaders.set("Content-Type", "application/json");
+    requestHeaders.set("X-Goog-Api-Key", this.apiKey);
+    requestHeaders.set(
+      "X-Goog-FieldMask",
+      "places.displayName,places.formattedAddress,places.location,places.rating,places.photos,places.currentOpeningHours,places.internationalPhoneNumber,places.id"
+    );
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: requestHeaders,
+      body: body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.places || [];
+  }
+
+  async searchRestaurants({
+    name = "",
+  }: {
+    name?: string;
+  }): Promise<PlaceResult[]> {
+    return this.searchByText({
+      query: "Egypt",
+      type: "restaurant",
+      name,
+    });
+  }
+
+  async searchHotels({ name = "" }: { name?: string }): Promise<PlaceResult[]> {
+    return this.searchByText({
+      query: "Egypt",
+      type: "lodging",
+      name,
+    });
+  }
+
+  async searchRestaurantsAndHotels({
+    name = "",
+  }: {
+    name?: string;
+  }): Promise<PlaceResult[]> {
+    const restaurants = await this.searchRestaurants({
+      name,
+    });
+
+    const hotels = await this.searchHotels({
+      name,
+    });
+
+    return [...restaurants, ...hotels];
+  }
+
+  async searchById({ placeId }: { placeId: string }): Promise<PlaceResult> {
+    const url = `${this.baseUrl}/v1/places/${placeId}`;
+    const requestHeaders = new Headers();
+    requestHeaders.set("Content-Type", "application/json");
+    requestHeaders.set("X-Goog-Api-Key", this.apiKey);
+    requestHeaders.set(
+      "X-Goog-FieldMask",
+      "id,displayName,photos,formattedAddress,rating,internationalPhoneNumber,currentOpeningHours"
+    );
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: requestHeaders,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  }
+}
+</file>
+
+<file path="src/services/ServiceInterface.ts">
+// src/services/ServiceInterface.ts - Version complète
+export interface PlaceResult {
+  types?: string[];
+  id: string;
+  displayName: {
+    text: string;
+    languageCode: string;
+  };
+  formattedAddress: string;
+  internationalPhoneNumber?: string;
+  currentOpeningHours?: {
+    openNow: boolean;
+    periods: Array<{
+      open: {
+        date: { year: number; month: number; day: number };
+        day: number;
+        hour: number;
+        minute: number;
+      };
+      close: {
+        date: { year: number; month: number; day: number };
+        day: number;
+        hour: number;
+        minute: number;
+      };
+    }>;
+    weekdayDescriptions: Array<string>;
+  };
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  rating?: number;
+  photos?: Array<{
+    name: string;
+    authorAttributions: Array<{
+      displayName: string;
+      photoUri: string;
+      uri: string;
+    }>;
+  }>;
+}
+
+// Interface pour la recherche par proximité
+export interface SearchNearbyParams {
+  locationRestriction: {
+    circle: {
+      center: { latitude: number; longitude: number };
+      radius: number;
+    };
+  };
+  includedTypes: string[];
+  maxResultCount: number;
+  languageCode: string;
+}
+
+// Interface pour la recherche par texte
+export interface SearchTextParams {
+  textQuery: string;
+  languageCode: string;
+  maxResultCount: number;
+}
+
+// Réponse de l'API Google Places
+export interface GooglePlacesResponse {
+  places: PlaceResult[];
+}
+
+export interface ServiceInterface {
+  searchByText(params: {
+    query: string;
+    type: string;
+    name?: string;
+  }): Promise<PlaceResult[]>;
+  
+  searchRestaurants(params: { 
+    name?: string;
+  }): Promise<PlaceResult[]>;
+  
+  searchHotels(params: { 
+    name?: string;
+  }): Promise<PlaceResult[]>;
+  
+  searchRestaurantsAndHotels(params: { 
+    name?: string;
+  }): Promise<PlaceResult[]>;
+  
+  searchById(params: { 
+    placeId: string;
+  }): Promise<PlaceResult>;
+
+  // Nouvelles méthodes pour la carte
+  searchNearby(params: SearchNearbyParams): Promise<GooglePlacesResponse>;
+  
+  searchText(params: SearchTextParams): Promise<GooglePlacesResponse>;
 }
 </file>
 

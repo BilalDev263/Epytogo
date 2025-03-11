@@ -27,7 +27,6 @@ export const Providers = ({ children }: Readonly<React.PropsWithChildren>) => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="system">
           {children}
-          <ReactQueryDevtools initialIsOpen={false} />
         </ThemeProvider>
       </QueryClientProvider>
     </SessionProvider>

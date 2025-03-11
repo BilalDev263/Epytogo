@@ -13,6 +13,7 @@ import GoogleMapRender from "../GoogleMap";
 import { Button } from "../ui/button";
 import { Search, Map, Grid, Filter } from "lucide-react";
 import { adaptPlacesForCards } from "@/utils/placeAdapter";
+import TravelChatbot from "../TravelChatbot";
 
 export function Home() {
   const [places, setPlaces] = useState<PlaceResult[]>([]);
@@ -152,6 +153,14 @@ export function Home() {
   const handleMarkerClick = (place: PlaceResult) => {
     // Optionnel : comportement lors du clic sur un marqueur
     console.log("Marqueur cliqué :", place.displayName?.text);
+  };
+
+  const handleChatbotRecommendation = (recommendations: any) => {
+    // Optionnel : Mise à jour de la recherche basée sur les recommandations du chatbot
+    console.log('Recommandations du chatbot:', recommendations);
+    
+    // Tu peux ici déclencher une recherche basée sur la localisation recommandée
+    // Par exemple : searchByLocation(recommendations.location);
   };
 
   const getTypeLabel = (type: string) => {
@@ -303,6 +312,9 @@ export function Home() {
           )}
         </div>
       </div>
+      
+      {/* Chatbot de recommandations */}
+      <TravelChatbot onRecommendation={handleChatbotRecommendation} />
     </div>
   );
 }
