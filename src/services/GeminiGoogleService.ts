@@ -20,6 +20,11 @@ export interface AIResponse {
     attraction?: any;
     location?: string;
   } | null;
+  dynamicTitles?: {
+    hotel?: string;
+    restaurant?: string;
+    attraction?: string;
+  } | null;
 }
 
 export class GeminiGoogleService {
@@ -27,45 +32,48 @@ export class GeminiGoogleService {
   private static readonly GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
   private static googleService = new Service("https://places.googleapis.com", "POST");
 
-  private static readonly SYSTEM_PROMPT = `Tu es Anubis, guide touristique égyptien expert et chaleureux.
+  private static readonly SYSTEM_PROMPT = `Tu es Anubis, guide touristique égyptien expert et chaleureux. Tu ne traites QUE les demandes concernant l'ÉGYPTE.
+
+RÈGLES STRICTES :
+- Si la demande concerne un autre pays : refuse poliment et redirige vers l'Égypte
+- Toutes les recherches sont limitées aux villes égyptiennes : Le Caire, Alexandrie, Luxor, Assouan, Hurghada, Sharm el-Sheikh
+- Corrige automatiquement les erreurs d'orthographe courantes des villes égyptiennes (ex: "urghada" → "Hurghada")
+- Accepte les variations de noms (Cairo/Caire, Alexandria/Alexandrie, etc.)
 
 PERSONNALITÉ :
-- Pour le message d'accueil : style égyptien complet avec "Ahlan wa sahlan", emojis 🏺🐪🏛️⚱️🌅👑
-- Pour les réponses suivantes : DIRECTES et CONCISES, max 2-3 phrases
+- Message d'accueil : style égyptien complet avec "Ahlan wa sahlan", emojis 🏺🐪🏛️⚱️🌅👑
+- Réponses suivantes : DIRECTES et CONCISES, max 2-3 phrases
 - Utilise occasionnellement des références égyptiennes mais reste PRATIQUE
 
 MISSION :
-- Aide à planifier des séjours en Égypte
-- Analyse les demandes pour extraire localisation, budget, types de lieux
+- Analyse précisément chaque demande pour créer des titres de recommandations personnalisés
 - Réponds de façon DIRECTE puis ajoute les paramètres de recherche
-
-STYLE DE RÉPONSE :
-- Si c'est le premier message : style égyptien complet
-- Sinon : réponse courte et efficace avec 1-2 emojis max
-- Exemple court : "Parfait ! Voici les meilleurs restaurants de fruits de mer à Alexandrie 🐟"
 
 FORMAT DE RÉPONSE :
 [Message direct d'Anubis - MAX 2-3 phrases]
 
 [SEARCH_PARAMS]
 {
-  "location": "ville égyptienne",
+  "location": "ville égyptienne uniquement",
   "types": ["restaurant", "lodging", "tourist_attraction"],
   "budget": "économique|moyen|luxe",
-  "query": "mots-clés pour Google Places"
+  "query": "mots-clés pour Google Places Egypt"
 }
 
-EXEMPLE :
-User: "Je veux un restaurant de poisson à Alexandrie"
-Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 🐟"
-
-[SEARCH_PARAMS]
+[DYNAMIC_TITLES]
 {
-  "location": "Alexandrie",
-  "types": ["restaurant"],
-  "budget": "moyen", 
-  "query": "seafood restaurant Alexandria Egypt"
-}`;
+  "hotel": "titre personnalisé basé sur la demande (ex: 'Oasis du désert' pour aventure, 'Palais du Nil' pour luxe)",
+  "restaurant": "titre personnalisé basé sur la demande (ex: 'Délices de Neptune' pour fruits de mer, 'Épices du Khan' pour local)",
+  "attraction": "titre personnalisé basé sur la demande (ex: 'Secrets des pharaons' pour histoire, 'Merveilles antiques' pour monuments)"
+}
+
+EXEMPLES DE TITRES DYNAMIQUES :
+- Demande "restaurant fruits de mer Alexandrie" → restaurant: "🐟 Trésors de la Méditerranée"
+- Demande "hôtel luxe vue Nil" → hotel: "👑 Palais des rives sacrées"
+- Demande "pyramides famille enfants" → attraction: "🏛️ Aventure des petits explorateurs"
+- Demande "budget routard Le Caire" → hotel: "🎒 Refuge des aventuriers"
+
+REFUSE POLIMENT si autre pays mentionné : "🏺 Pardonnez-moi, je ne guide qu'en terre d'Égypte ! Puis-je vous aider à découvrir nos merveilles ?"`;
 
   static async sendMessage(messages: ChatMessage[]): Promise<AIResponse> {
     try {
@@ -76,16 +84,18 @@ Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 
       if (geminiResponse) {
         console.log('✅ Réponse Gemini reçue:', geminiResponse.substring(0, 100) + '...');
         const searchParams = this.parseSearchParams(geminiResponse);
+        const dynamicTitles = this.parseDynamicTitles(geminiResponse);
         let recommendations = null;
         
-        if (searchParams) {
+        if (searchParams && this.isEgyptLocation(searchParams.location)) {
           recommendations = await this.searchWithGooglePlaces(searchParams);
         }
 
         return {
-          message: geminiResponse.replace(/\[SEARCH_PARAMS\][\s\S]*/, '').trim(),
+          message: geminiResponse.replace(/\[SEARCH_PARAMS\][\s\S]*/, '').replace(/\[DYNAMIC_TITLES\][\s\S]*/, '').trim(),
           searchParams,
-          recommendations
+          recommendations,
+          dynamicTitles
         };
       }
       
@@ -99,7 +109,6 @@ Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 
 
   private static async callGeminiAPI(messages: ChatMessage[]): Promise<string | null> {
     try {
-      // Construire le prompt pour Gemini
       const conversation = messages.map(m => `${m.role}: ${m.content}`).join('\n');
       const fullPrompt = `${this.SYSTEM_PROMPT}\n\nConversation:\n${conversation}\n\nAnubis:`;
 
@@ -113,9 +122,9 @@ Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 
             }]
           }],
           generationConfig: {
-            temperature: 0.7, // Réduit pour des réponses plus directes
+            temperature: 0.7,
             topP: 0.8,
-            maxOutputTokens: 400 // Réduit pour forcer la concision
+            maxOutputTokens: 600 // Augmenté pour inclure les titres dynamiques
           }
         })
       });
@@ -137,12 +146,96 @@ Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 
     try {
       const match = geminiResponse.match(/\[SEARCH_PARAMS\]\s*(\{[\s\S]*?\})/);
       if (match) {
+        const params = JSON.parse(match[1]);
+        // Vérification stricte : seules les villes égyptiennes sont acceptées
+        if (this.isEgyptLocation(params.location)) {
+          return params;
+        }
+      }
+    } catch (error) {
+      console.error('Erreur parsing search params:', error);
+    }
+    return null;
+  }
+
+  private static parseDynamicTitles(geminiResponse: string): any {
+    try {
+      const match = geminiResponse.match(/\[DYNAMIC_TITLES\]\s*(\{[\s\S]*?\})/);
+      if (match) {
         return JSON.parse(match[1]);
       }
     } catch (error) {
-      console.error('Erreur parsing:', error);
+      console.error('Erreur parsing dynamic titles:', error);
     }
     return null;
+  }
+
+  private static isEgyptLocation(location: string): boolean {
+    const egyptCities = [
+      'Le Caire', 'Cairo', 'Caire',
+      'Alexandrie', 'Alexandria', 
+      'Luxor', 'Louxor',
+      'Assouan', 'Aswan',
+      'Hurghada', 'Hourghada',
+      'Sharm el-Sheikh', 'Sharm', 'Sharm El Sheikh'
+    ];
+    
+    return egyptCities.some(city => 
+      location.toLowerCase().includes(city.toLowerCase())
+    );
+  }
+
+  // Fonction de correction automatique pour les villes égyptiennes
+  private static correctEgyptLocation(input: string): string {
+    const corrections: { [key: string]: string } = {
+      // Hurghada variations
+      'urghada': 'Hurghada',
+      'hurgheda': 'Hurghada',
+      'hurgada': 'Hurghada',
+      'hourghada': 'Hurghada',
+      'ghardaia': 'Hurghada', // erreur commune
+      
+      // Le Caire variations
+      'cairo': 'Le Caire',
+      'cayre': 'Le Caire',
+      'kayro': 'Le Caire',
+      
+      // Alexandrie variations
+      'alexandria': 'Alexandrie',
+      'alexandri': 'Alexandrie',
+      'alexendrie': 'Alexandrie',
+      
+      // Luxor variations
+      'louxor': 'Luxor',
+      'luxour': 'Luxor',
+      'louqsor': 'Luxor',
+      
+      // Assouan variations
+      'aswan': 'Assouan',
+      'asswan': 'Assouan',
+      'assouan': 'Assouan',
+      
+      // Sharm variations
+      'sharm': 'Sharm el-Sheikh',
+      'charm': 'Sharm el-Sheikh',
+      'sharm el sheikh': 'Sharm el-Sheikh'
+    };
+
+    const lowercaseInput = input.toLowerCase();
+    
+    // Recherche exacte d'abord
+    if (corrections[lowercaseInput]) {
+      return corrections[lowercaseInput];
+    }
+    
+    // Recherche partielle avec similarité
+    for (const [typo, correct] of Object.entries(corrections)) {
+      if (lowercaseInput.includes(typo) || typo.includes(lowercaseInput)) {
+        return correct;
+      }
+    }
+    
+    return input; // Retourne l'input original si aucune correction trouvée
   }
 
   private static async searchWithGooglePlaces(searchParams: any): Promise<any | null> {
@@ -150,12 +243,17 @@ Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 
       const cityCoordinates: { [key: string]: { lat: number; lng: number } } = {
         'Le Caire': { lat: 30.0444, lng: 31.2357 },
         'Cairo': { lat: 30.0444, lng: 31.2357 },
+        'Caire': { lat: 30.0444, lng: 31.2357 },
         'Alexandrie': { lat: 31.2001, lng: 29.9187 },
         'Alexandria': { lat: 31.2001, lng: 29.9187 },
         'Luxor': { lat: 25.6872, lng: 32.6396 },
         'Louxor': { lat: 25.6872, lng: 32.6396 },
         'Assouan': { lat: 24.0889, lng: 32.8998 },
-        'Aswan': { lat: 24.0889, lng: 32.8998 }
+        'Aswan': { lat: 24.0889, lng: 32.8998 },
+        'Hurghada': { lat: 27.2574, lng: 33.8129 },
+        'Hourghada': { lat: 27.2574, lng: 33.8129 },
+        'Sharm el-Sheikh': { lat: 27.9158, lng: 34.3300 },
+        'Sharm': { lat: 27.9158, lng: 34.3300 }
       };
 
       const location = searchParams.location || 'Le Caire';
@@ -170,7 +268,7 @@ Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 
         },
         includedTypes: searchParams.types || ["restaurant", "lodging", "tourist_attraction"],
         maxResultCount: 8,
-        languageCode: "fr",
+        languageCode: "fr"
       });
 
       if (results.places && results.places.length > 0) {
@@ -210,13 +308,48 @@ Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 
   private static getFallbackResponse(userMessage: string): AIResponse {
     const message = userMessage.toLowerCase();
     
-    let location = 'Le Caire';
+    // Correction automatique des erreurs d'orthographe
+    const correctedMessage = message;
+    let correctedLocation = '';
+    
+    // Essayer de corriger les noms de villes
+    const words = message.split(' ');
+    for (const word of words) {
+      const corrected = this.correctEgyptLocation(word);
+      if (corrected !== word) {
+        correctedLocation = corrected;
+        break;
+      }
+    }
+    
+    // Vérifier si la demande concerne l'Égypte (avec correction)
+    const isEgyptRelated = this.isEgyptLocation(message) || 
+                          correctedLocation !== '' ||
+                          message.includes('egypt') || 
+                          message.includes('égypte') ||
+                          message.includes('pyramide') ||
+                          message.includes('pharaon') ||
+                          message.includes('nil');
+
+    if (!isEgyptRelated) {
+      return {
+        message: "🏺 Pardonnez-moi, je ne guide qu'en terre d'Égypte ! Puis-je vous aider à découvrir nos merveilles ?",
+        searchParams: undefined,
+        recommendations: null,
+        dynamicTitles: null
+      };
+    }
+    
+    let location = correctedLocation || 'Le Caire';
     let types = ['restaurant', 'lodging', 'tourist_attraction'];
     let budget = 'moyen';
     
+    // Détection de ville avec correction
     if (message.includes('alexandria') || message.includes('alexandrie')) location = 'Alexandrie';
     else if (message.includes('luxor') || message.includes('louxor')) location = 'Luxor';
     else if (message.includes('aswan') || message.includes('assouan')) location = 'Assouan';
+    else if (message.includes('hurghada') || message.includes('urghada') || message.includes('hurgada')) location = 'Hurghada';
+    else if (message.includes('sharm') || message.includes('charm')) location = 'Sharm el-Sheikh';
     
     if (message.includes('restaurant') || message.includes('manger')) types = ['restaurant'];
     else if (message.includes('hotel') || message.includes('dormir')) types = ['lodging'];
@@ -225,17 +358,31 @@ Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 
     if (message.includes('pas cher') || message.includes('budget')) budget = 'économique';
     else if (message.includes('luxe') || message.includes('cher')) budget = 'luxe';
 
-    // Réponses courtes et directes
-    const shortResponses = [
-      `Parfait ! Voici mes recommandations pour ${location} 🏺`,
-      `Excellent choix ! ${location} vous attend 🐪`,
-      `Trouvé ! Les meilleures options à ${location} 👑`
-    ];
+    // Titres dynamiques basiques pour le fallback
+    const fallbackTitles = {
+      hotel: budget === 'luxe' ? "👑 Palais des pharaons" : budget === 'économique' ? "🏺 Refuge du voyageur" : "🏨 Demeure du Nil",
+      restaurant: message.includes('poisson') ? "🐟 Délices de la mer" : "🍽️ Saveurs d'Égypte",
+      attraction: message.includes('histoire') ? "🏛️ Héritage millénaire" : "🏺 Merveilles antiques"
+    };
+
+    // Message avec correction si nécessaire
+    let responseMessage = '';
+    if (correctedLocation !== '') {
+      responseMessage = `Parfait ! ${correctedLocation} vous attend avec ses merveilles 🏺`;
+    } else {
+      const shortResponses = [
+        `Parfait ! Voici mes recommandations pour ${location} 🏺`,
+        `Excellent choix ! ${location} vous attend 🐪`,
+        `Trouvé ! Les meilleures options à ${location} 👑`
+      ];
+      responseMessage = shortResponses[Math.floor(Math.random() * shortResponses.length)];
+    }
 
     return {
-      message: shortResponses[Math.floor(Math.random() * shortResponses.length)],
-      searchParams: { location, types, query: `${types.join(' ')} ${location}`, budget },
-      recommendations: null
+      message: responseMessage,
+      searchParams: { location, types, query: `${types.join(' ')} ${location} Egypt`, budget },
+      recommendations: null,
+      dynamicTitles: fallbackTitles
     };
   }
 }

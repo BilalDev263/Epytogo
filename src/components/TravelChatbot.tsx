@@ -13,13 +13,19 @@ interface Message {
     attraction?: any;
     location?: string;
   } | null;
+  dynamicTitles?: {
+    hotel?: string;
+    restaurant?: string;
+    attraction?: string;
+  } | null;
 }
 
 interface ChatbotProps {
   onRecommendation?: (recommendations: any) => void;
+  onPlaceClick?: (placeId: string, placeType: 'hotel' | 'restaurant' | 'attraction') => void;
 }
 
-const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
+const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -42,120 +48,55 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
     scrollToBottom();
   }, [messages]);
 
-  // Fonction pour analyser le type de demande et générer des titres dynamiques
-  const analyzeDemandType = (userMessage: string, recommendations: any) => {
-    const message = userMessage.toLowerCase();
+  // Fonction pour vérifier si la demande concerne l'Égypte avec correction d'orthographe
+  const isEgyptRelated = (message: string): boolean => {
+    const egyptKeywords = [
+      'egypt', 'égypte', 'cairo', 'caire', 'alexandria', 'alexandrie',
+      'luxor', 'louxor', 'aswan', 'assouan', 'hurghada', 'sharm',
+      'pyramide', 'pharaon', 'nil', 'sphinx', 'temple', 'karnak',
+      'valley', 'vallée', 'roi', 'kings', 'gizeh', 'giza',
+      // Erreurs d'orthographe courantes
+      'urghada', 'hurgada', 'hourghada', 'charm', 'cayre'
+    ];
     
-    // Détection du type principal de demande
-    const demandTypes = {
-      hotel: message.includes('hotel') || message.includes('dormir') || message.includes('hébergement') || message.includes('séjour'),
-      restaurant: message.includes('restaurant') || message.includes('manger') || message.includes('dîner') || message.includes('cuisine'),
-      attraction: message.includes('visiter') || message.includes('voir') || message.includes('attraction') || message.includes('monument'),
-      luxury: message.includes('luxe') || message.includes('haut de gamme') || message.includes('prestige'),
-      budget: message.includes('pas cher') || message.includes('budget') || message.includes('économique'),
-      seafood: message.includes('poisson') || message.includes('fruits de mer') || message.includes('seafood'),
-      history: message.includes('histoire') || message.includes('historique') || message.includes('ancien'),
-      family: message.includes('famille') || message.includes('enfant') || message.includes('kids')
-    };
-
-    // Génération des titres selon le contexte
-    const titles = {
-      hotel: demandTypes.luxury ? "👑 Palais de pharaon" : demandTypes.budget ? "🏺 Refuge du voyageur" : "🏨 Demeure recommandée",
-      restaurant: demandTypes.seafood ? "🐟 Délices de Neptune" : demandTypes.luxury ? "🍽️ Banquet royal" : demandTypes.budget ? "🥘 Saveurs authentiques" : "🍽️ Table recommandée",
-      attraction: demandTypes.history ? "🏛️ Héritage millénaire" : demandTypes.family ? "🎪 Aventure familiale" : "🏺 Trésor à découvrir"
-    };
-
-    return {
-      hotel: titles.hotel,
-      restaurant: titles.restaurant,
-      attraction: titles.attraction
-    };
+    return egyptKeywords.some(keyword => 
+      message.toLowerCase().includes(keyword)
+    );
   };
 
-  // Simulation d'une API de recommandations (gardée pour le fallback)
-  const generateRecommendations = (userMessage: string) => {
-    const message = userMessage.toLowerCase();
-    
-    const preferences = {
-      location: '',
-      budget: '',
-      hotelType: '',
-      interests: []
-    };
-
-    if (message.includes('cairo') || message.includes('caire')) {
-      preferences.location = 'Le Caire';
-    } else if (message.includes('alexandria') || message.includes('alexandrie')) {
-      preferences.location = 'Alexandrie';
-    } else if (message.includes('luxor') || message.includes('louxor')) {
-      preferences.location = 'Luxor';
-    } else if (message.includes('aswan') || message.includes('assouan')) {
-      preferences.location = 'Assouan';
-    } else {
-      preferences.location = 'Le Caire';
+  // Fonction pour gérer les clics sur les recommandations
+  const handlePlaceClick = (place: any, type: 'hotel' | 'restaurant' | 'attraction') => {
+    if (onPlaceClick && place.place_id) {
+      onPlaceClick(place.place_id, type);
+    } else if (place.name) {
+      // Fallback : recherche par nom si pas de place_id
+      window.open(`https://www.google.com/maps/search/${encodeURIComponent(place.name + ' Egypt')}`, '_blank');
     }
-
-    if (message.includes('luxe') || message.includes('cher') || message.includes('haut de gamme')) {
-      preferences.budget = 'luxe';
-    } else if (message.includes('moyen') || message.includes('standard')) {
-      preferences.budget = 'moyen';
-    } else if (message.includes('budget') || message.includes('économique') || message.includes('pas cher')) {
-      preferences.budget = 'budget';
-    } else {
-      preferences.budget = 'moyen';
-    }
-
-    const recommendations = getRecommendations(preferences);
-    return recommendations;
-  };
-
-  const getRecommendations = (preferences: any) => {
-    type BudgetType = 'luxe' | 'moyen' | 'budget';
-    type LocationType = 'Le Caire' | 'Alexandrie' | 'Luxor';
-    
-    const hotels: Record<BudgetType, Record<LocationType, any>> = {
-      luxe: {
-        'Le Caire': { name: "Four Seasons Hotel Cairo at Nile Plaza", rating: 4.8, price: "300-500€/nuit", description: "Vue sur le Nil, spa luxueux" },
-        'Alexandrie': { name: "Four Seasons Hotel Alexandria", rating: 4.7, price: "250-400€/nuit", description: "Vue sur la Méditerranée" },
-        'Luxor': { name: "Sofitel Winter Palace Luxor", rating: 4.6, price: "200-350€/nuit", description: "Hôtel historique face au Nil" }
-      },
-      moyen: {
-        'Le Caire': { name: "Steigenberger El Tahrir Cairo", rating: 4.3, price: "80-150€/nuit", description: "Centre-ville, proche du musée" },
-        'Alexandrie': { name: "Hilton Alexandria Corniche", rating: 4.2, price: "70-120€/nuit", description: "Sur la corniche d'Alexandrie" },
-        'Luxor': { name: "Mercure Luxor Karnak", rating: 4.1, price: "60-100€/nuit", description: "Proche des temples de Karnak" }
-      },
-      budget: {
-        'Le Caire': { name: "Cairo Khan Hotel", rating: 3.8, price: "25-50€/nuit", description: "Quartier Khan el-Khalili" },
-        'Alexandrie': { name: "New Capri Hotel", rating: 3.6, price: "20-40€/nuit", description: "Centre-ville d'Alexandrie" },
-        'Luxor': { name: "Nefertiti Hotel Luxor", rating: 3.7, price: "15-35€/nuit", description: "Proche de la gare" }
-      }
-    };
-
-    const restaurants: Record<LocationType, any> = {
-      'Le Caire': { name: "Zitouni", cuisine: "Orientale moderne", rating: 4.5, price: "40-60€", description: "Restaurant du Four Seasons, cuisine égyptienne raffinée" },
-      'Alexandrie': { name: "Fish Market", cuisine: "Fruits de mer", rating: 4.4, price: "25-40€", description: "Poissons frais de la Méditerranée" },
-      'Luxor': { name: "1886 Restaurant", cuisine: "Internationale", rating: 4.3, price: "35-55€", description: "Restaurant historique au Winter Palace" }
-    };
-
-    const attractions: Record<LocationType, any> = {
-      'Le Caire': { name: "Pyramides de Gizeh", type: "Site historique", rating: 4.9, description: "Les célèbres pyramides et le Sphinx" },
-      'Alexandrie': { name: "Bibliothèque d'Alexandrie", type: "Culturel", rating: 4.6, description: "Moderne bibliothèque sur le site antique" },
-      'Luxor': { name: "Vallée des Rois", type: "Site archéologique", rating: 4.8, description: "Tombeaux des pharaons du Nouvel Empire" }
-    };
-
-    const location = (preferences.location || 'Le Caire') as LocationType;
-    const budget = (preferences.budget || 'moyen') as BudgetType;
-
-    return {
-      hotel: hotels[budget]?.[location] || hotels.moyen[location],
-      restaurant: restaurants[location],
-      attraction: attractions[location],
-      location: location
-    };
   };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
+
+    // Vérification préalable si la demande concerne l'Égypte
+    if (!isEgyptRelated(inputMessage)) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: inputMessage,
+        timestamp: new Date()
+      };
+
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: "🏺 Pardonnez-moi, je ne guide qu'en terre d'Égypte ! Puis-je vous aider à découvrir nos merveilles ? Essayez de me parler du Caire, d'Alexandrie, de Luxor ou de nos sites légendaires ! 🐪",
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, userMessage, botResponse]);
+      setInputMessage('');
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -172,7 +113,6 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
     ];
     setConversationHistory(newConversationHistory);
     
-    const currentUserMessage = inputMessage; // Sauvegarder pour l'analyse
     setInputMessage('');
     setIsTyping(true);
 
@@ -189,7 +129,8 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
         type: 'bot',
         content: aiResponse.message,
         timestamp: new Date(),
-        recommendations: aiResponse.recommendations
+        recommendations: aiResponse.recommendations,
+        dynamicTitles: aiResponse.dynamicTitles // Titres générés par Gemini
       };
 
       setMessages(prev => [...prev, botResponse]);
@@ -219,6 +160,26 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  // Fonction pour obtenir l'icône appropriée basée sur le titre dynamique
+  const getIconForTitle = (title: string) => {
+    if (title.includes('Neptune') || title.includes('mer') || title.includes('🐟')) {
+      return <span className="text-blue-500">🐟</span>;
+    }
+    if (title.includes('Palais') || title.includes('👑')) {
+      return <span className="text-yellow-500">👑</span>;
+    }
+    if (title.includes('Refuge') || title.includes('🎒')) {
+      return <span className="text-green-500">🎒</span>;
+    }
+    if (title.includes('pharaon') || title.includes('🏛️')) {
+      return <span className="text-amber-500">🏛️</span>;
+    }
+    if (title.includes('aventur') || title.includes('explorateur')) {
+      return <span className="text-purple-500">🗺️</span>;
+    }
+    return null;
   };
 
   return (
@@ -253,7 +214,7 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
               </div>
               <div>
                 <h3 className="font-semibold">Anubis - Guide Égyptien</h3>
-                <p className="text-sm text-yellow-100">En ligne • Hiéroglyphes décodés ✨</p>
+                <p className="text-sm text-yellow-100">En ligne • Spécialiste Égypte uniquement 🇪🇬</p>
               </div>
             </div>
             <button
@@ -266,96 +227,98 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
-            {messages.map((message, index) => {
-              // Récupérer le message utilisateur précédent pour l'analyse
-              const previousUserMessage = index > 0 && messages[index - 1].type === 'user' 
-                ? messages[index - 1].content 
-                : '';
-              
-              // Générer les titres dynamiques
-              const dynamicTitles = message.recommendations && previousUserMessage
-                ? analyzeDemandType(previousUserMessage, message.recommendations)
-                : {
-                    hotel: "🏨 Hébergement recommandé",
-                    restaurant: "🍽️ Restaurant recommandé", 
-                    attraction: "🏺 Attraction recommandée"
-                  };
-
-              return (
-                <div
-                  key={message.id}
-                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-[80%] ${
-                    message.type === 'user'
-                      ? 'bg-yellow-600 text-white rounded-2xl rounded-br-md'
-                      : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md shadow-md border-l-4 border-yellow-600'
-                  } px-4 py-3`}>
-                    <p className="text-sm">{message.content}</p>
-                    
-                    {/* Recommandations avec titres dynamiques */}
-                    {message.recommendations && (
-                      <div className="mt-4 space-y-3">
-                        {/* Hôtel - Affiché seulement si pertinent */}
-                        {message.recommendations.hotel && (
-                          <div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 border border-yellow-200 dark:border-yellow-700">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Hotel className="h-4 w-4 text-yellow-600" />
-                              <span className="font-semibold text-yellow-800 dark:text-yellow-300">{dynamicTitles.hotel}</span>
-                            </div>
-                            <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.hotel?.name}</h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.hotel?.description}</p>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.hotel?.rating}</span>
-                              <span className="text-sm font-medium text-yellow-600">{message.recommendations.hotel?.price}</span>
-                            </div>
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`max-w-[80%] ${
+                  message.type === 'user'
+                    ? 'bg-yellow-600 text-white rounded-2xl rounded-br-md'
+                    : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md shadow-md border-l-4 border-yellow-600'
+                } px-4 py-3`}>
+                  <p className="text-sm">{message.content}</p>
+                  
+                  {/* Recommandations avec titres 100% dynamiques de Gemini */}
+                  {message.recommendations && message.dynamicTitles && (
+                    <div className="mt-4 space-y-3">
+                      {/* Hôtel - Titre dynamique de Gemini */}
+                      {message.recommendations.hotel && message.dynamicTitles.hotel && (
+                        <div 
+                          className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 border border-yellow-200 dark:border-yellow-700 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors"
+                          onClick={() => handlePlaceClick(message.recommendations!.hotel, 'hotel')}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            {getIconForTitle(message.dynamicTitles.hotel) || <Hotel className="h-4 w-4 text-yellow-600" />}
+                            <span className="font-semibold text-yellow-800 dark:text-yellow-300">
+                              {message.dynamicTitles.hotel}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-auto">👆 Cliquez pour voir</span>
                           </div>
-                        )}
-
-                        {/* Restaurant - Affiché seulement si pertinent */}
-                        {message.recommendations.restaurant && (
-                          <div className="bg-orange-50 dark:bg-orange-900/30 rounded-lg p-3 border border-orange-200 dark:border-orange-700">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Utensils className="h-4 w-4 text-orange-600" />
-                              <span className="font-semibold text-orange-800 dark:text-orange-300">{dynamicTitles.restaurant}</span>
-                            </div>
-                            <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.restaurant?.name}</h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.restaurant?.description}</p>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.restaurant?.rating}</span>
-                              <span className="text-sm text-gray-500">{message.recommendations.restaurant?.cuisine} • {message.recommendations.restaurant?.price}</span>
-                            </div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.hotel?.name}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.hotel?.description}</p>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.hotel?.rating}</span>
+                            <span className="text-sm font-medium text-yellow-600">{message.recommendations.hotel?.price}</span>
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {/* Attraction - Affiché seulement si pertinent */}
-                        {message.recommendations.attraction && (
-                          <div className="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-3 border border-amber-200 dark:border-amber-700">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Camera className="h-4 w-4 text-amber-600" />
-                              <span className="font-semibold text-amber-800 dark:text-amber-300">{dynamicTitles.attraction}</span>
-                            </div>
-                            <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.attraction?.name}</h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.attraction?.description}</p>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.attraction?.rating}</span>
-                              <span className="text-sm text-gray-500">{message.recommendations.attraction?.type}</span>
-                            </div>
+                      {/* Restaurant - Titre dynamique de Gemini */}
+                      {message.recommendations.restaurant && message.dynamicTitles.restaurant && (
+                        <div 
+                          className="bg-orange-50 dark:bg-orange-900/30 rounded-lg p-3 border border-orange-200 dark:border-orange-700 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors"
+                          onClick={() => handlePlaceClick(message.recommendations!.restaurant, 'restaurant')}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            {getIconForTitle(message.dynamicTitles.restaurant) || <Utensils className="h-4 w-4 text-orange-600" />}
+                            <span className="font-semibold text-orange-800 dark:text-orange-300">
+                              {message.dynamicTitles.restaurant}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-auto">👆 Cliquez pour voir</span>
                           </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    <p className="text-xs opacity-70 mt-2">
-                      {message.timestamp.toLocaleTimeString('fr-FR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </p>
-                  </div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.restaurant?.name}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.restaurant?.description}</p>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.restaurant?.rating}</span>
+                            <span className="text-sm text-gray-500">{message.recommendations.restaurant?.cuisine} • {message.recommendations.restaurant?.price}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Attraction - Titre dynamique de Gemini */}
+                      {message.recommendations.attraction && message.dynamicTitles.attraction && (
+                        <div 
+                          className="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-3 border border-amber-200 dark:border-amber-700 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
+                          onClick={() => handlePlaceClick(message.recommendations!.attraction, 'attraction')}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            {getIconForTitle(message.dynamicTitles.attraction) || <Camera className="h-4 w-4 text-amber-600" />}
+                            <span className="font-semibold text-amber-800 dark:text-amber-300">
+                              {message.dynamicTitles.attraction}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-auto">👆 Cliquez pour voir</span>
+                          </div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.attraction?.name}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.attraction?.description}</p>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.attraction?.rating}</span>
+                            <span className="text-sm text-gray-500">{message.recommendations.attraction?.type}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <p className="text-xs opacity-70 mt-2">
+                    {message.timestamp.toLocaleTimeString('fr-FR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </p>
                 </div>
-              );
-            })}
+              </div>
+            ))}
 
             {/* Indicateur de frappe */}
             {isTyping && (
@@ -380,7 +343,7 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Racontez-moi vos rêves de voyage en Égypte... 🐪"
+                placeholder="Explorez l'Égypte avec moi ! (Le Caire, Alexandrie, Luxor...) 🐪"
                 className="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-500 focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                 rows={2}
               />
@@ -392,6 +355,10 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation }) => {
                 <Send className="h-4 w-4" />
               </button>
             </div>
+            {/* Indication claire que seule l'Égypte est supportée */}
+            <p className="text-xs text-gray-500 mt-1 text-center">
+              🇪🇬 Guide spécialisé Égypte uniquement
+            </p>
           </div>
         </div>
       )}

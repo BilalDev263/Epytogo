@@ -1,4 +1,4 @@
-// src/components/home/Home.tsx (mise à jour)
+// src/components/home/Home.tsx (mise à jour complète)
 "use client";
 
 import { Service } from "@/services/Service";
@@ -155,12 +155,45 @@ export function Home() {
     console.log("Marqueur cliqué :", place.displayName?.text);
   };
 
+  // Fonction pour gérer les recommandations du chatbot
   const handleChatbotRecommendation = (recommendations: any) => {
-    // Optionnel : Mise à jour de la recherche basée sur les recommandations du chatbot
     console.log('Recommandations du chatbot:', recommendations);
     
-    // Tu peux ici déclencher une recherche basée sur la localisation recommandée
-    // Par exemple : searchByLocation(recommendations.location);
+    // Mise à jour automatique de la recherche basée sur les recommandations
+    if (recommendations && recommendations.location) {
+      // Déclencher une recherche pour la ville recommandée
+      searchByLocation(recommendations.location);
+    }
+  };
+
+  // Fonction pour gérer les clics sur les recommandations du chatbot
+  const handlePlaceClick = (placeId: string, placeType: 'hotel' | 'restaurant' | 'attraction') => {
+    // Rediriger vers la page de détail du lieu
+    router.push(`/places/${placeId}?type=${placeType}`);
+  };
+
+  // Recherche par localisation (appelée depuis les recommandations du chatbot)
+  const searchByLocation = async (location: string) => {
+    setLoading(true);
+    try {
+      const maxResults = getMaxResults();
+      
+      const results = await service.searchText({
+        textQuery: `restaurants hotels attractions ${location} Egypt`,
+        languageCode: "fr",
+        maxResultCount: maxResults,
+      });
+
+      if (results.places && results.places.length > 0) {
+        setPlaces(results.places);
+        setFilteredPlaces(results.places);
+        setQuery(`Lieux à ${location}`); // Mettre à jour l'affichage
+      }
+    } catch (error) {
+      console.error("Erreur lors de la recherche par localisation :", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getTypeLabel = (type: string) => {
@@ -178,10 +211,10 @@ export function Home() {
         {/* En-tête avec recherche */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Découvrez l'Égypte 🇪🇬
+            Découvrez l'Égypte 🐪🏺
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-            Restaurants 🍽️, hôtels 🏨 et attractions touristiques 🏛️
+            Restaurants 🍽️, Hôtels 🏨 et Attractions Touristiques 🏛️
           </p>
 
           {/* Barre de recherche */}
@@ -193,7 +226,7 @@ export function Home() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Rechercher des restaurants, hôtels..."
+                  placeholder="Rechercher des restaurants, hôtels... (limité à l'Égypte) 🇪🇬"
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -301,20 +334,35 @@ export function Home() {
           ) : (
             <div className="text-center py-12">
               <div className="text-gray-500 dark:text-gray-400 text-lg">
-                {query ? "Aucun résultat trouvé" : "Aucun lieu disponible"}
+                {query ? "Aucun résultat trouvé pour l'Égypte" : "Aucun lieu disponible"}
               </div>
               {query && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                  Essayez avec d'autres mots-clés
-                </p>
+                <div className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                  <p>Essayez avec d'autres mots-clés</p>
+                  <p className="mt-1">💡 Utilisez le chatbot Anubis pour des suggestions personnalisées !</p>
+                </div>
               )}
             </div>
           )}
         </div>
+
+        {/* Indication pour le chatbot */}
+        <div className="text-center mb-4">
+          <div className="inline-flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-4 py-2 rounded-full border border-yellow-200 dark:border-yellow-700">
+            <span className="text-lg">🏺</span>
+            <span className="text-sm font-medium">
+              Besoin d'aide ? Anubis vous guide dans l'Égypte antique !
+            </span>
+            <span className="text-lg animate-pulse">👇</span>
+          </div>
+        </div>
       </div>
       
-      {/* Chatbot de recommandations */}
-      <TravelChatbot onRecommendation={handleChatbotRecommendation} />
+      {/* Chatbot de recommandations avec toutes les fonctionnalités */}
+      <TravelChatbot 
+        onRecommendation={handleChatbotRecommendation}
+        onPlaceClick={handlePlaceClick}
+      />
     </div>
   );
 }
