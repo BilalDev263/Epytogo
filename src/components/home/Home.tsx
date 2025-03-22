@@ -1,4 +1,4 @@
-// src/components/home/Home.tsx (mise à jour complète)
+// src/components/home/Home.tsx (mise à jour avec intégration chatbot)
 "use client";
 
 import { Service } from "@/services/Service";
@@ -11,7 +11,7 @@ import { CustomCard } from "./CustomCard";
 import { SkeletonCard } from "./SkeletonCard";
 import GoogleMapRender from "../GoogleMap";
 import { Button } from "../ui/button";
-import { Search, Map, Grid, Filter } from "lucide-react";
+import { Search, Map, Grid, Filter, Sparkles } from "lucide-react";
 import { adaptPlacesForCards } from "@/utils/placeAdapter";
 import TravelChatbot from "../TravelChatbot";
 
@@ -22,6 +22,13 @@ export function Home() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showMap, setShowMap] = useState<boolean>(false);
   const [filteredPlaces, setFilteredPlaces] = useState<PlaceResult[]>([]);
+  const [searchSource, setSearchSource] = useState<'manual' | 'chatbot'>('manual'); // Source de la recherche
+  
+  // États pour l'autocomplétion
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState<boolean>(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number>(-1);
 
   const { data: session } = useSession();
   const { currentUser, setCurrentUser } = useStore();
@@ -32,6 +39,30 @@ export function Home() {
     []
   );
 
+  // Suggestions prédéfinies pour l'autocomplétion
+  const predefinedSuggestions = [
+    // Villes principales
+    "Le Caire", "Cairo", "Alexandrie", "Alexandria", "Luxor", "Louxor", 
+    "Assouan", "Aswan", "Gizeh", "Giza", "Memphis", "Saqqara",
+    "Sharm El Sheikh", "Hurghada", "Port Said", "Suez", "Ismailia",
+    
+    // Attractions célèbres
+    "Pyramides de Gizeh", "Sphinx", "Temple de Karnak", "Vallée des Rois",
+    "Bibliothèque d'Alexandrie", "Citadelle de Saladin", "Khan el-Khalili",
+    "Temple de Philae", "Abou Simbel", "Temple de Louxor",
+    
+    // Types de recherches populaires
+    "restaurants au Caire", "hôtels à Alexandrie", "attractions à Luxor",
+    "pyramides", "temples", "musées", "marchés", "croisière Nil",
+    
+    // Hôtels célèbres
+    "Four Seasons Cairo", "Kempinski Nile", "Winter Palace Luxor", 
+    "Old Cataract Aswan", "Sofitel Luxor",
+    
+    // Restaurants célèbres
+    "Sequoia", "Abou Tarek", "Fish Market Alexandria", "Tikka"
+  ];
+
   // Charger les lieux populaires d'Égypte au démarrage
   useEffect(() => {
     if (session?.user) {
@@ -41,30 +72,135 @@ export function Home() {
     loadPopularPlaces();
   }, [session]);
 
+  // Appliquer les filtres quand selectedTypes change et qu'on n'a pas de recherche active
+  useEffect(() => {
+    if (!query.trim() && places.length > 0) {
+      console.log('🔄 Application des filtres aux lieux populaires:', selectedTypes.length === 0 ? 'TOUS' : selectedTypes);
+      applyFilters(places, selectedTypes);
+    }
+  }, [selectedTypes, query]); // Surveiller selectedTypes et query, mais pas places pour éviter les boucles
+
+  // Appliquer les filtres quand les places sont chargés pour la première fois
+  useEffect(() => {
+    if (places.length > 0 && filteredPlaces.length === 0) {
+      console.log('🎯 Premier filtrage des lieux chargés');
+      applyFilters(places, selectedTypes);
+    }
+  }, [places.length]); // Seulement quand le nombre de places change
+
+  // Gestion de l'autocomplétion
+  const handleQueryChange = async (value: string) => {
+    setQuery(value);
+    
+    // Si l'utilisateur tape manuellement, on remet en mode manual
+    if (searchSource === 'chatbot') {
+      setSearchSource('manual');
+    }
+
+    // Réinitialiser la sélection
+    setSelectedSuggestionIndex(-1);
+
+    // Autocomplétion après 4 caractères
+    if (value.length >= 4) {
+      setIsLoadingSuggestions(true);
+      
+      // Filtrer les suggestions prédéfinies
+      const filteredSuggestions = predefinedSuggestions
+        .filter(suggestion => 
+          suggestion.toLowerCase().includes(value.toLowerCase())
+        )
+        .slice(0, 5); // Limiter à 5 suggestions
+      
+      setSuggestions(filteredSuggestions);
+      setShowSuggestions(filteredSuggestions.length > 0);
+      setIsLoadingSuggestions(false);
+    } else {
+      setShowSuggestions(false);
+      setSuggestions([]);
+    }
+  };
+
+  // Sélectionner une suggestion
+  const selectSuggestion = (suggestion: string) => {
+    setQuery(suggestion);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    // Optionnel : lancer automatiquement la recherche
+    // performSearch(suggestion, 'manual');
+  };
+
+  // Gestion des touches clavier pour les suggestions
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        if (selectedSuggestionIndex >= 0) {
+          e.preventDefault();
+          selectSuggestion(suggestions[selectedSuggestionIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        break;
+    }
+  };
+
+  // Fermer les suggestions si on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.search-container')) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Fonction pour calculer le nombre max de résultats selon les filtres
   const getMaxResults = () => {
     const selectedCount = selectedTypes.length;
-    if (selectedCount === 0) return 8; // Par défaut
-    if (selectedCount === 1) return 2; // 2 si un seul type
-    if (selectedCount === 2) return 4; // 4 si deux types
-    return 6; // 6 si trois types ou plus
+    if (selectedCount === 0) return 20; // Tous types, demander plus
+    if (selectedCount === 1) return 8; // 1 type, bon nombre
+    if (selectedCount === 2) return 12; // 2 types, 6 par type
+    return 15; // 3 types, 5 par type
   };
 
   const loadPopularPlaces = async () => {
     setLoading(true);
     try {
-      const maxResults = getMaxResults();
+      const maxResults = 20; // Demander plus de lieux populaires pour avoir de la variété
       
-      // Recherche de lieux populaires en Égypte
+      // Recherche de lieux populaires en Égypte avec tous les types
       const results = await service.searchText({
-        textQuery: "best restaurants hotels attractions Egypt Cairo Alexandria Luxor",
+        textQuery: "popular places restaurants hotels tourist attractions museums Egypt Cairo Alexandria Luxor",
         languageCode: "fr",
         maxResultCount: maxResults,
       });
 
       if (results.places && results.places.length > 0) {
+        console.log('🏺 Lieux populaires chargés:', results.places.length, 'résultats');
+        console.log('🔍 Types trouvés:', Array.from(new Set(results.places.flatMap(p => p.types || []))));
         setPlaces(results.places);
-        setFilteredPlaces(results.places);
+        applyFilters(results.places, selectedTypes);
       } else {
         // Fallback avec searchNearby si searchText ne donne rien
         const nearbyResults = await service.searchNearby({
@@ -74,14 +210,15 @@ export function Home() {
               radius: 500000
             }
           },
-          includedTypes: ["restaurant", "lodging", "tourist_attraction"],
+          includedTypes: ["restaurant", "lodging", "tourist_attraction", "museum", "park", "zoo"],
           maxResultCount: maxResults,
           languageCode: "fr",
         });
         
         if (nearbyResults.places && nearbyResults.places.length > 0) {
+          console.log('🏺 Lieux proches chargés:', nearbyResults.places.length, 'résultats');
           setPlaces(nearbyResults.places);
-          setFilteredPlaces(nearbyResults.places);
+          applyFilters(nearbyResults.places, selectedTypes);
         }
       }
     } catch (error) {
@@ -91,16 +228,37 @@ export function Home() {
     }
   };
 
-  const handleSearch = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  // Fonction de recherche unifiée
+  const performSearch = async (searchQuery: string, source: 'manual' | 'chatbot' = 'manual') => {
+    if (!searchQuery.trim()) return;
 
     setLoading(true);
+    setSearchSource(source);
+    
     try {
       const maxResults = getMaxResults();
       
+      // Construire la requête en fonction des filtres sélectionnés
+      let enhancedQuery = searchQuery;
+      
+      // Si des filtres sont sélectionnés, on enrichit la requête
+      if (selectedTypes.length > 0) {
+        const typeLabels = selectedTypes.map(type => {
+          if (type === 'restaurant') return 'restaurants';
+          if (type === 'lodging') return 'hotels';
+          if (type === 'tourist_attraction') return 'attractions';
+          return type;
+        }).join(' ');
+        
+        enhancedQuery = `${typeLabels} ${searchQuery}`;
+        console.log('🔍 Requête enrichie avec filtres sélectionnés:', enhancedQuery);
+      } else {
+        // Aucun filtre sélectionné = recherche tous types de lieux
+        console.log('🔍 Recherche tous types (aucun filtre sélectionné):', enhancedQuery);
+      }
+      
       const results = await service.searchText({
-        textQuery: `${query} Égypte`,
+        textQuery: `${enhancedQuery} Égypte`,
         languageCode: "fr",
         maxResultCount: maxResults,
       });
@@ -109,6 +267,16 @@ export function Home() {
         const newPlaces = results.places;
         setPlaces(newPlaces);
         applyFilters(newPlaces);
+        
+        // Si la recherche vient du chatbot, faire défiler vers les résultats
+        if (source === 'chatbot') {
+          setTimeout(() => {
+            const resultsSection = document.getElementById('search-results');
+            if (resultsSection) {
+              resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 500);
+        }
       } else {
         // Aucun résultat trouvé
         setPlaces([]);
@@ -121,7 +289,12 @@ export function Home() {
     }
   };
 
-  const applyFilters = (placesToFilter: PlaceResult[] = places) => {
+  const handleSearch = async (e: FormEvent) => {
+    e.preventDefault();
+    await performSearch(query, 'manual');
+  };
+
+  const applyFilters = (placesToFilter: PlaceResult[] = places, newSelectedTypes?: string[]) => {
     let filtered = placesToFilter;
 
     if (selectedTypes.length > 0) {
@@ -133,21 +306,89 @@ export function Home() {
     setFilteredPlaces(filtered);
   };
 
-  const handleTypeFilter = (type: string) => {
+  const handleTypeFilter = async (type: string) => {
     const newSelectedTypes = selectedTypes.includes(type)
       ? selectedTypes.filter(t => t !== type)
       : [...selectedTypes, type];
     
     setSelectedTypes(newSelectedTypes);
     
-    // Appliquer les filtres
-    let filtered = places;
-    if (newSelectedTypes.length > 0) {
-      filtered = places.filter(place =>
-        place.types?.some(t => newSelectedTypes.includes(t))
-      );
+    // Si on a une requête de recherche active, relancer la recherche avec les nouveaux filtres
+    if (query.trim()) {
+      console.log('🔄 Relance de la recherche avec nouveaux filtres:', newSelectedTypes);
+      
+      // Utiliser les nouveaux filtres pour la recherche
+      await performSearchWithTypes(query, newSelectedTypes, searchSource);
+    } else {
+      // Sinon, juste filtrer les résultats actuels (lieux populaires)
+      applyFilters(places, newSelectedTypes);
     }
-    setFilteredPlaces(filtered);
+  };
+
+  // Nouvelle fonction pour rechercher avec des types spécifiques
+  const performSearchWithTypes = async (searchQuery: string, types: string[], source: 'manual' | 'chatbot' = 'manual') => {
+    if (!searchQuery.trim()) return;
+
+    setLoading(true);
+    setSearchSource(source);
+    
+    try {
+      const maxResults = getMaxResults();
+      
+      // Construire la requête en fonction des types fournis
+      let enhancedQuery = searchQuery;
+      
+      // Si des types sont fournis, on enrichit la requête
+      if (types.length > 0) {
+        const typeLabels = types.map(type => {
+          if (type === 'restaurant') return 'restaurants';
+          if (type === 'lodging') return 'hotels';
+          if (type === 'tourist_attraction') return 'tourist attractions museums';
+          return type;
+        }).join(' ');
+        
+        enhancedQuery = `${typeLabels} ${searchQuery}`;
+        console.log('🔍 Requête avec types spécifiés:', enhancedQuery, 'Types:', types);
+      } else {
+        // Aucun type spécifié = recherche TOUS types de lieux
+        enhancedQuery = `restaurants hotels tourist attractions museums parks ${searchQuery}`;
+        console.log('🔍 Recherche TOUS types:', enhancedQuery);
+      }
+      
+      const results = await service.searchText({
+        textQuery: `${enhancedQuery} Égypte`,
+        languageCode: "fr",
+        maxResultCount: Math.max(20, types.length * 5), // Plus de résultats pour avoir de la variété
+      });
+
+      if (results.places && results.places.length > 0) {
+        console.log('📊 Résultats trouvés:', results.places.length);
+        console.log('🏷️ Types dans les résultats:', Array.from(new Set(results.places.flatMap(p => p.types || []))));
+        
+        const newPlaces = results.places;
+        setPlaces(newPlaces);
+        applyFilters(newPlaces, types);
+        
+        // Si la recherche vient du chatbot, faire défiler vers les résultats
+        if (source === 'chatbot') {
+          setTimeout(() => {
+            const resultsSection = document.getElementById('search-results');
+            if (resultsSection) {
+              resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 500);
+        }
+      } else {
+        console.log('❌ Aucun résultat trouvé');
+        // Aucun résultat trouvé
+        setPlaces([]);
+        setFilteredPlaces([]);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la recherche :", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMarkerClick = (place: PlaceResult) => {
@@ -155,45 +396,25 @@ export function Home() {
     console.log("Marqueur cliqué :", place.displayName?.text);
   };
 
-  // Fonction pour gérer les recommandations du chatbot
   const handleChatbotRecommendation = (recommendations: any) => {
+    // Optionnel : Mise à jour de la recherche basée sur les recommandations du chatbot
     console.log('Recommandations du chatbot:', recommendations);
+  };
+
+  // NOUVELLE FONCTION : Gestion des mises à jour de recherche depuis le chatbot
+  const handleChatbotSearchUpdate = (searchTerm: string) => {
+    console.log('🤖 Chatbot a suggéré une recherche:', searchTerm);
     
-    // Mise à jour automatique de la recherche basée sur les recommandations
-    if (recommendations && recommendations.location) {
-      // Déclencher une recherche pour la ville recommandée
-      searchByLocation(recommendations.location);
-    }
-  };
-
-  // Fonction pour gérer les clics sur les recommandations du chatbot
-  const handlePlaceClick = (placeId: string, placeType: 'hotel' | 'restaurant' | 'attraction') => {
-    // Rediriger vers la page de détail du lieu
-    router.push(`/places/${placeId}?type=${placeType}`);
-  };
-
-  // Recherche par localisation (appelée depuis les recommandations du chatbot)
-  const searchByLocation = async (location: string) => {
-    setLoading(true);
-    try {
-      const maxResults = getMaxResults();
-      
-      const results = await service.searchText({
-        textQuery: `restaurants hotels attractions ${location} Egypt`,
-        languageCode: "fr",
-        maxResultCount: maxResults,
-      });
-
-      if (results.places && results.places.length > 0) {
-        setPlaces(results.places);
-        setFilteredPlaces(results.places);
-        setQuery(`Lieux à ${location}`); // Mettre à jour l'affichage
-      }
-    } catch (error) {
-      console.error("Erreur lors de la recherche par localisation :", error);
-    } finally {
-      setLoading(false);
-    }
+    // Mettre à jour seulement la barre de recherche principale (pas de recherche automatique)
+    setQuery(searchTerm);
+    setSearchSource('chatbot');
+    
+    // Fermer les suggestions d'autocomplétion
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    
+    // Pas de recherche automatique - l'utilisateur doit cliquer sur "Rechercher"
   };
 
   const getTypeLabel = (type: string) => {
@@ -217,27 +438,98 @@ export function Home() {
             Restaurants 🍽️, Hôtels 🏨 et Attractions Touristiques 🏛️
           </p>
 
-          {/* Barre de recherche */}
+          {/* Barre de recherche avec effet chatbot */}
           <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-6">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Rechercher des restaurants, hôtels... (limité à l'Égypte) 🇪🇬"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+            <div className="search-container relative">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => handleQueryChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Rechercher... (autocomplétion dès 4 caractères)"
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:border-transparent transition-all duration-300 ${
+                      searchSource === 'chatbot' 
+                        ? 'border-yellow-400 focus:ring-yellow-500 shadow-yellow-200 shadow-md' 
+                        : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                    } ${showSuggestions ? 'rounded-b-none' : ''}`}
+                    autoComplete="off"
+                  />
+                  {searchSource === 'chatbot' && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 z-10">
+                      <Sparkles className="h-5 w-5 text-yellow-500 animate-pulse" />
+                    </div>
+                  )}
+                </div>
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                  className={`px-6 py-3 text-white transition-all duration-300 ${
+                    searchSource === 'chatbot'
+                      ? 'bg-yellow-600 hover:bg-yellow-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {loading ? "..." : "Rechercher"}
+                </Button>
               </div>
-              <Button 
-                type="submit" 
-                disabled={loading}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {loading ? "..." : "Rechercher"}
-              </Button>
+
+              {/* Suggestions d'autocomplétion */}
+              {showSuggestions && (
+                <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 border-l border-r border-b border-gray-300 dark:border-gray-600 rounded-b-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {isLoadingSuggestions ? (
+                    <div className="p-3 text-center text-gray-500 dark:text-gray-400">
+                      <div className="animate-spin inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2"></div>
+                      Recherche de suggestions...
+                    </div>
+                  ) : suggestions.length > 0 ? (
+                    <>
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => selectSuggestion(suggestion)}
+                          className={`w-full px-4 py-3 text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0 flex items-center gap-3 transition-colors ${
+                            index === selectedSuggestionIndex
+                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                          }`}
+                        >
+                          <Search className={`h-4 w-4 ${
+                            index === selectedSuggestionIndex 
+                              ? 'text-blue-600 dark:text-blue-400' 
+                              : 'text-gray-400'
+                          }`} />
+                          <span>{suggestion}</span>
+                        </button>
+                      ))}
+                      <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+                        {suggestions.length} suggestion{suggestions.length > 1 ? 's' : ''} trouvée{suggestions.length > 1 ? 's' : ''} • 
+                        <span className="ml-1">↑↓ pour naviguer • ↵ pour sélectionner • ⎋ pour fermer</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-3 text-center text-gray-500 dark:text-gray-400">
+                      Aucune suggestion trouvée
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
+            {searchSource === 'chatbot' && (
+              <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 flex items-center justify-center gap-1 animate-fade-in">
+                <Sparkles className="h-4 w-4" />
+                Suggestion d'Anubis • Cliquez "Rechercher" pour lancer
+                {selectedTypes.length === 0 ? (
+                  <span className="ml-1 text-xs">(tous types de lieux)</span>
+                ) : (
+                  <span className="ml-1 text-xs">({selectedTypes.length} type(s) sélectionné(s))</span>
+                )}
+              </p>
+            )}
           </form>
 
           {/* Filtres et contrôles d'affichage */}
@@ -259,6 +551,15 @@ export function Home() {
                   {getTypeLabel(type)}
                 </Button>
               ))}
+              {selectedTypes.length === 0 ? (
+                <span className="text-xs text-green-600 dark:text-green-400 flex items-center ml-2">
+                  (tous types actifs)
+                </span>
+              ) : (
+                <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center ml-2">
+                  ({selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''} sélectionné{selectedTypes.length > 1 ? 's' : ''})
+                </span>
+              )}
             </div>
 
             {/* Bouton carte/grille */}
@@ -292,24 +593,53 @@ export function Home() {
             />
             <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">
               {filteredPlaces.length} lieu(x) affiché(s) sur la carte
-              {selectedTypes.length > 0 && (
+              {selectedTypes.length === 0 ? (
+                <span className="ml-2 text-green-600 dark:text-green-400">
+                  • Tous types de lieux • Max {getMaxResults()} résultats
+                </span>
+              ) : (
                 <span className="ml-2 text-blue-600 dark:text-blue-400">
-                  • Max {getMaxResults()} résultats selon filtres
+                  • Filtré sur {selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''} • Max {getMaxResults()} résultats
                 </span>
               )}
             </p>
           </div>
         ) : null}
 
-        {/* Grille des résultats */}
-        <div className="mb-8">
+                  {/* Grille des résultats */}
+        <div className="mb-8" id="search-results">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
               {query ? `Résultats pour "${query}"` : "Lieux populaires"}
+              {searchSource === 'chatbot' && (
+                <span className="ml-2 text-yellow-600 dark:text-yellow-400 text-lg">🤖</span>
+              )}
             </h2>
-            <span className="text-gray-600 dark:text-gray-400">
-              {filteredPlaces.length} résultat(s)
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-gray-600 dark:text-gray-400">
+                {filteredPlaces.length} résultat(s)
+              </span>
+              {/* Bouton de débogage temporaire */}
+              <button
+                onClick={() => {
+                  console.log('🔍 DEBUG INFO:');
+                  console.log('Places totaux:', places.length);
+                  console.log('Places filtrés:', filteredPlaces.length);
+                  console.log('Filtres sélectionnés:', selectedTypes);
+                  console.log('Types dans places:', Array.from(new Set(places.flatMap(p => p.types || []))));
+                  console.log('Types dans filteredPlaces:', Array.from(new Set(filteredPlaces.flatMap(p => p.types || []))));
+                  
+                  // Compter par type
+                  const restaurants = places.filter(p => p.types?.includes('restaurant')).length;
+                  const hotels = places.filter(p => p.types?.includes('lodging')).length;
+                  const attractions = places.filter(p => p.types?.includes('tourist_attraction')).length;
+                  console.log('Répartition:', { restaurants, hotels, attractions });
+                }}
+                className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+              >
+                🔍 Debug
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -334,34 +664,22 @@ export function Home() {
           ) : (
             <div className="text-center py-12">
               <div className="text-gray-500 dark:text-gray-400 text-lg">
-                {query ? "Aucun résultat trouvé pour l'Égypte" : "Aucun lieu disponible"}
+                {query ? "Aucun résultat trouvé" : "Aucun lieu disponible"}
               </div>
               {query && (
-                <div className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                  <p>Essayez avec d'autres mots-clés</p>
-                  <p className="mt-1">💡 Utilisez le chatbot Anubis pour des suggestions personnalisées !</p>
-                </div>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                  Essayez avec d'autres mots-clés
+                </p>
               )}
             </div>
           )}
         </div>
-
-        {/* Indication pour le chatbot */}
-        <div className="text-center mb-4">
-          <div className="inline-flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-4 py-2 rounded-full border border-yellow-200 dark:border-yellow-700">
-            <span className="text-lg">🏺</span>
-            <span className="text-sm font-medium">
-              Besoin d'aide ? Anubis vous guide dans l'Égypte antique !
-            </span>
-            <span className="text-lg animate-pulse">👇</span>
-          </div>
-        </div>
       </div>
       
-      {/* Chatbot de recommandations avec toutes les fonctionnalités */}
+      {/* Chatbot de recommandations avec intégration */}
       <TravelChatbot 
         onRecommendation={handleChatbotRecommendation}
-        onPlaceClick={handlePlaceClick}
+        onSearchUpdate={handleChatbotSearchUpdate}
       />
     </div>
   );

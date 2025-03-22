@@ -12,11 +12,57 @@ type Method = "GET" | "POST" | "PUT" | "DELETE";
 export class Service implements ServiceInterface {
   apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "";
 
-  private maxResults = 1; // ← Change à 40 pour la présentation
+  private maxResults = 1;// ← Change à 40 pour la présentation
 
   constructor(public baseUrl: string, public method: Method) {
     this.baseUrl = baseUrl;
     this.method = method;
+  }
+
+  // 🆕 Nouvelles méthodes pour gérer maxResults
+  getMaxResults(): number {
+    return this.maxResults;
+  }
+
+  setMaxResults(max: number): void {
+    this.maxResults = max;
+  }
+
+  // 🆕 Méthodes privées pour organiser et limiter par catégorie
+  private organizeByType(places: PlaceResult[]): any {
+    const hotels = places.filter(place => 
+      place.types?.some((type: string) => ['lodging', 'hotel', 'motel', 'resort'].includes(type))
+    );
+    
+    const restaurants = places.filter(place =>
+      place.types?.some((type: string) => ['restaurant', 'food', 'meal_takeaway', 'cafe'].includes(type))
+    );
+    
+    const attractions = places.filter(place =>
+      place.types?.some((type: string) => ['tourist_attraction', 'museum', 'park', 'zoo'].includes(type))
+    );
+
+    return { hotels, restaurants, attractions };
+  }
+
+  private limitByMaxResults(organized: any): any {
+    return {
+      hotels: organized.hotels.slice(0, this.maxResults),
+      restaurants: organized.restaurants.slice(0, this.maxResults),
+      attractions: organized.attractions.slice(0, this.maxResults)
+    };
+  }
+
+  private applyMaxResultsFilter(places: PlaceResult[]): PlaceResult[] {
+    if (this.maxResults <= 0 || places.length === 0) {
+      return places;
+    }
+
+    const organized = this.organizeByType(places);
+    const limited = this.limitByMaxResults(organized);
+    
+    // Recombiner les résultats limités
+    return [...limited.hotels, ...limited.restaurants, ...limited.attractions];
   }
 
   // 🆕 Nouvelle méthode : Recherche par proximité pour la carte
@@ -49,8 +95,12 @@ export class Service implements ServiceInterface {
     }
 
     const result = await response.json();
+    
+    // Appliquer la limitation maxResults par catégorie
+    const filteredPlaces = this.applyMaxResultsFilter(result.places || []);
+    
     return {
-      places: result.places || []
+      places: filteredPlaces
     };
   }
 
@@ -83,12 +133,16 @@ export class Service implements ServiceInterface {
     }
 
     const result = await response.json();
+    
+    // Appliquer la limitation maxResults par catégorie
+    const filteredPlaces = this.applyMaxResultsFilter(result.places || []);
+    
     return {
-      places: result.places || []
+      places: filteredPlaces
     };
   }
 
-  // Méthodes existantes (inchangées)
+  // Méthodes existantes (avec application des limites)
   async searchByText({
     query,
     type,
@@ -108,7 +162,7 @@ export class Service implements ServiceInterface {
     const body = JSON.stringify({
       textQuery,
       includedType: type,
-      maxResultCount: this.maxResults, // ← Utilise la limite définie
+      maxResultCount: Math.max(this.maxResults * 3, 20), // Demander plus pour avoir le choix
     });
 
     const requestHeaders = new Headers();
@@ -116,7 +170,7 @@ export class Service implements ServiceInterface {
     requestHeaders.set("X-Goog-Api-Key", this.apiKey);
     requestHeaders.set(
       "X-Goog-FieldMask",
-      "places.displayName,places.formattedAddress,places.location,places.rating,places.photos,places.currentOpeningHours,places.internationalPhoneNumber,places.id"
+      "places.displayName,places.formattedAddress,places.location,places.rating,places.photos,places.currentOpeningHours,places.internationalPhoneNumber,places.id,places.types"
     );
 
     const response = await fetch(url, {
@@ -130,7 +184,16 @@ export class Service implements ServiceInterface {
     }
 
     const result = await response.json();
-    return result.places || [];
+    const places = result.places || [];
+    
+    // Appliquer la limitation selon le type recherché
+    if (type === 'restaurant') {
+      return places.slice(0, this.maxResults);
+    } else if (type === 'lodging') {
+      return places.slice(0, this.maxResults);
+    } else {
+      return this.applyMaxResultsFilter(places);
+    }
   }
 
   async searchRestaurants({
@@ -166,7 +229,11 @@ export class Service implements ServiceInterface {
       name,
     });
 
-    return [...restaurants, ...hotels];
+    // Limiter chaque catégorie selon maxResults
+    const limitedRestaurants = restaurants.slice(0, this.maxResults);
+    const limitedHotels = hotels.slice(0, this.maxResults);
+
+    return [...limitedRestaurants, ...limitedHotels];
   }
 
   async searchById({ placeId }: { placeId: string }): Promise<PlaceResult> {
@@ -176,7 +243,7 @@ export class Service implements ServiceInterface {
     requestHeaders.set("X-Goog-Api-Key", this.apiKey);
     requestHeaders.set(
       "X-Goog-FieldMask",
-      "id,displayName,photos,formattedAddress,rating,internationalPhoneNumber,currentOpeningHours"
+      "id,displayName,photos,formattedAddress,rating,internationalPhoneNumber,currentOpeningHours,types"
     );
 
     const response = await fetch(url, {
