@@ -18,6 +18,7 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   reviews       Review[]
+  visits        Visit[]  // Nouvelle relation pour l'historique des visites
 }
 
 model Review {
@@ -29,4 +30,17 @@ model Review {
   updatedAt DateTime @updatedAt
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
+}
+
+// Modèle simple pour l'historique des visites
+model Visit {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  placeId   String   // Google Places ID
+  placeName String   // Nom de l'établissement
+  visitedAt DateTime @default(now())
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId, visitedAt(sort: Desc)])
+  @@unique([userId, placeId])
 }

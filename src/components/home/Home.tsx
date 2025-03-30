@@ -14,6 +14,7 @@ import { Button } from "../ui/button";
 import { Search, Map, Grid, Filter, Sparkles } from "lucide-react";
 import { adaptPlacesForCards } from "@/utils/placeAdapter";
 import TravelChatbot from "../TravelChatbot";
+import { VisitHistory } from "./VisitHistory";
 
 export function Home() {
   const [places, setPlaces] = useState<PlaceResult[]>([]);
@@ -325,6 +326,32 @@ export function Home() {
     }
   };
 
+
+  const handlePlaceClick = async (place: any) => {
+    // D'abord naviguer vers la page de détails
+    router.push(`/places/${place.placeId}`);
+    
+    // Puis enregistrer la visite (seulement si l'utilisateur est connecté)
+    if (session?.user?.id) {
+      try {
+        await fetch('/api/visits', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            placeId: place.placeId,
+            placeName: place.name || place.displayName?.text || 'Lieu inconnu'
+          }),
+        });
+        
+        console.log('✅ Visite enregistrée:', place.name || place.displayName?.text);
+      } catch (error) {
+        console.error('❌ Erreur enregistrement visite:', error);
+        // On ne fait pas planter l'app si l'enregistrement échoue
+      }
+    }
+  };
   // Nouvelle fonction pour rechercher avec des types spécifiques
   const performSearchWithTypes = async (searchQuery: string, types: string[], source: 'manual' | 'chatbot' = 'manual') => {
     if (!searchQuery.trim()) return;
@@ -449,7 +476,7 @@ export function Home() {
                     value={query}
                     onChange={(e) => handleQueryChange(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Rechercher... (autocomplétion dès 4 caractères)"
+                    placeholder="Rechercher..."
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:border-transparent transition-all duration-300 ${
                       searchSource === 'chatbot' 
                         ? 'border-yellow-400 focus:ring-yellow-500 shadow-yellow-200 shadow-md' 
@@ -650,14 +677,11 @@ export function Home() {
             </div>
           ) : filteredPlaces.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {adaptPlacesForCards(filteredPlaces).map((place, index) => (
+             {adaptPlacesForCards(filteredPlaces).map((place, index) => (
                 <CustomCard 
                   key={`${place.placeId}-${index}`} 
                   place={place}
-                  onClick={() => {
-                    // Navigation vers la page de détails du lieu avec Next.js router
-                    router.push(`/places/${place.placeId}`);
-                  }}
+                  onClick={() => handlePlaceClick(place)}  // 👈 CHANGEMENT ICI
                 />
               ))}
             </div>
@@ -670,12 +694,20 @@ export function Home() {
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
                   Essayez avec d'autres mots-clés
                 </p>
+                
               )}
+              
             </div>
           )}
         </div>
-      </div>
-      
+        {/* 🎯 AJOUTER ICI LE BLOC VISITHISTORY - JUSTE APRÈS LA SECTION RÉSULTATS */}
+        {session?.user && (
+          <div className="mb-8">
+            <VisitHistory />
+          </div>
+        )}
+
+      </div>  {/* 👈 Cette div ferme probablement le container principal */}   
       {/* Chatbot de recommandations avec intégration */}
       <TravelChatbot 
         onRecommendation={handleChatbotRecommendation}
