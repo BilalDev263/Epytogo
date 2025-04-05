@@ -39,31 +39,6 @@ export function Home() {
     () => new Service("https://places.googleapis.com", "POST"),
     []
   );
-
-  // Suggestions prédéfinies pour l'autocomplétion
-  const predefinedSuggestions = [
-    // Villes principales
-    "Le Caire", "Cairo", "Alexandrie", "Alexandria", "Luxor", "Louxor", 
-    "Assouan", "Aswan", "Gizeh", "Giza", "Memphis", "Saqqara",
-    "Sharm El Sheikh", "Hurghada", "Port Said", "Suez", "Ismailia",
-    
-    // Attractions célèbres
-    "Pyramides de Gizeh", "Sphinx", "Temple de Karnak", "Vallée des Rois",
-    "Bibliothèque d'Alexandrie", "Citadelle de Saladin", "Khan el-Khalili",
-    "Temple de Philae", "Abou Simbel", "Temple de Louxor",
-    
-    // Types de recherches populaires
-    "restaurants au Caire", "hôtels à Alexandrie", "attractions à Luxor",
-    "pyramides", "temples", "musées", "marchés", "croisière Nil",
-    
-    // Hôtels célèbres
-    "Four Seasons Cairo", "Kempinski Nile", "Winter Palace Luxor", 
-    "Old Cataract Aswan", "Sofitel Luxor",
-    
-    // Restaurants célèbres
-    "Sequoia", "Abou Tarek", "Fish Market Alexandria", "Tikka"
-  ];
-
   // Charger les lieux populaires d'Égypte au démarrage
   useEffect(() => {
     if (session?.user) {
@@ -89,37 +64,124 @@ export function Home() {
     }
   }, [places.length]); // Seulement quand le nombre de places change
 
-  // Gestion de l'autocomplétion
-  const handleQueryChange = async (value: string) => {
-    setQuery(value);
+  // Dans Home.tsx - REMPLACER la fonction handleQueryChange par celle-ci :
+
+// Gestion de l'autocomplétion avec Google Places API
+const handleQueryChange = async (value: string) => {
+  setQuery(value);
+  
+  // Si l'utilisateur tape manuellement, on remet en mode manual
+  if (searchSource === 'chatbot') {
+    setSearchSource('manual');
+  }
+
+  // Réinitialiser la sélection
+  setSelectedSuggestionIndex(-1);
+
+  // Autocomplétion après 3 caractères avec Google Places API
+  if (value.length >= 3) {
+    setIsLoadingSuggestions(true);
     
-    // Si l'utilisateur tape manuellement, on remet en mode manual
-    if (searchSource === 'chatbot') {
-      setSearchSource('manual');
-    }
+    try {
+      // Construire les types à inclure basés sur les filtres sélectionnés
+      let includedTypes: string[] = [];
+      if (selectedTypes.length > 0) {
+        includedTypes = selectedTypes;
+      } else {
+        // Si aucun filtre, inclure tous les types principaux
+        includedTypes = ["restaurant", "lodging", "tourist_attraction", "museum", "park"];
+      }
 
-    // Réinitialiser la sélection
-    setSelectedSuggestionIndex(-1);
+      // Utiliser l'API Google Places Autocomplete
+      const autocompleteResults = await service.autocomplete({
+        input: value,
+        locationBias: {
+          circle: {
+            center: { latitude: 26.8206, longitude: 30.8025 }, // Centre de l'Égypte
+            radius: 50000// 500km de rayon
+          }
+        },
+        includedTypes: includedTypes,
+        languageCode: "fr"      });
 
-    // Autocomplétion après 4 caractères
-    if (value.length >= 4) {
-      setIsLoadingSuggestions(true);
+      if (autocompleteResults?.suggestions && autocompleteResults.suggestions.length > 0) {
+        // Extraire les textes des suggestions
+        const suggestionTexts = autocompleteResults.suggestions
+          .map((suggestion: any) => {
+            // Prioriser le texte principal (displayName)
+            if (suggestion.placePrediction?.text?.text) {
+              return suggestion.placePrediction.text.text;
+            }
+            // Fallback sur structuredFormat si disponible
+            if (suggestion.placePrediction?.structuredFormat?.mainText?.text) {
+              return suggestion.placePrediction.structuredFormat.mainText.text;
+            }
+            return null;
+          })
+          .filter(Boolean) // Supprimer les valeurs null
+          .slice(0, 5); // Limiter à 5 suggestions
+
+        setSuggestions(suggestionTexts);
+        setShowSuggestions(suggestionTexts.length > 0);
+      } else {
+        // Si pas de résultats de l'API, suggestions vides
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } catch (error) {
+      console.error("Erreur autocomplétion Google Places:", error);
       
-      // Filtrer les suggestions prédéfinies
-      const filteredSuggestions = predefinedSuggestions
-        .filter(suggestion => 
-          suggestion.toLowerCase().includes(value.toLowerCase())
-        )
-        .slice(0, 5); // Limiter à 5 suggestions
-      
-      setSuggestions(filteredSuggestions);
-      setShowSuggestions(filteredSuggestions.length > 0);
+      // En cas d'erreur, utiliser un fallback simple basé sur les filtres
+      const fallbackSuggestions = getFallbackSuggestions(value);
+      setSuggestions(fallbackSuggestions);
+      setShowSuggestions(fallbackSuggestions.length > 0);
+    } finally {
       setIsLoadingSuggestions(false);
-    } else {
-      setShowSuggestions(false);
-      setSuggestions([]);
     }
+  } else {
+    setShowSuggestions(false);
+    setSuggestions([]);
+  }
+};
+
+// Fonction de fallback en cas d'erreur API
+const getFallbackSuggestions = (value: string): string[] => {
+  const fallbackData: { [key: string]: string[] } = {
+    restaurant: [
+      "restaurants au Caire", "restaurants à Alexandrie", "restaurants à Luxor",
+      "Sequoia", "Abou Tarek", "Fish Market Alexandria", "restaurants égyptiens"
+    ],
+    lodging: [
+      "hôtels au Caire", "hôtels à Alexandrie", "hôtels à Luxor",
+      "Four Seasons Cairo", "Winter Palace Luxor", "hôtels de luxe Égypte"
+    ],
+    tourist_attraction: [
+      "Pyramides de Gizeh", "Temple de Karnak", "Vallée des Rois",
+      "Bibliothèque d'Alexandrie", "Khan el-Khalili", "attractions touristiques"
+    ]
   };
+
+  let relevantSuggestions: string[] = [];
+
+  if (selectedTypes.length > 0) {
+    // Utiliser les suggestions basées sur les filtres sélectionnés
+    selectedTypes.forEach(type => {
+      if (fallbackData[type]) {
+        relevantSuggestions.push(...fallbackData[type]);
+      }
+    });
+  } else {
+    // Si aucun filtre, utiliser toutes les suggestions
+    relevantSuggestions = Object.values(fallbackData).flat();
+  }
+
+  // Filtrer par le texte saisi et limiter à 5
+  return relevantSuggestions
+    .filter(suggestion => 
+      suggestion.toLowerCase().includes(value.toLowerCase())
+    )
+    .slice(0, 5);
+};
 
   // Sélectionner une suggestion
   const selectSuggestion = (suggestion: string) => {
@@ -509,7 +571,7 @@ export function Home() {
                   {isLoadingSuggestions ? (
                     <div className="p-3 text-center text-gray-500 dark:text-gray-400">
                       <div className="animate-spin inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2"></div>
-                      Recherche de suggestions...
+                      Recherche via Google Places...
                     </div>
                   ) : suggestions.length > 0 ? (
                     <>
@@ -530,21 +592,38 @@ export function Home() {
                               : 'text-gray-400'
                           }`} />
                           <span>{suggestion}</span>
+                          {/* Indicateur Google Places */}
+                          <span className="ml-auto text-xs text-green-600 dark:text-green-400">
+                            🌍 Places API
+                          </span>
                         </button>
                       ))}
                       <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
-                        {suggestions.length} suggestion{suggestions.length > 1 ? 's' : ''} trouvée{suggestions.length > 1 ? 's' : ''} • 
+                        {suggestions.length} suggestion{suggestions.length > 1 ? 's' : ''} Google Places
+                        {selectedTypes.length > 0 && (
+                          <span className="ml-2 text-blue-600 dark:text-blue-400">
+                            • Filtré sur {selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        <br />
                         <span className="ml-1">↑↓ pour naviguer • ↵ pour sélectionner • ⎋ pour fermer</span>
                       </div>
                     </>
                   ) : (
                     <div className="p-3 text-center text-gray-500 dark:text-gray-400">
-                      Aucune suggestion trouvée
+                      <div className="mb-2">🔍 Aucune suggestion Google Places</div>
+                      {selectedTypes.length > 0 ? (
+                        <div className="text-xs">
+                          Filtres actifs : {selectedTypes.map(t => getTypeLabel(t)).join(', ')}
+                        </div>
+                      ) : (
+                        <div className="text-xs">Essayez un terme plus spécifique</div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
-            </div>
+            </div> {/* 👈 FERMETURE de search-container */}
 
             {searchSource === 'chatbot' && (
               <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 flex items-center justify-center gap-1 animate-fade-in">

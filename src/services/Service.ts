@@ -258,4 +258,78 @@ export class Service implements ServiceInterface {
     const result = await response.json();
     return result;
   }
+
+
+
+// REMPLACER ta méthode autocomplete par celle-ci (NOUVELLE API CORRIGÉE) :
+
+async autocomplete(params: {
+  input: string;
+  locationBias?: any; // On garde pour compatibilité
+  includedTypes?: string[];
+  languageCode?: string;
+  maxResultCount?: number; // On garde pour compatibilité
+}) {
+  try {
+    // 🎯 Construire le body selon la nouvelle API
+    const requestBody = {
+      input: params.input,
+      // 👈 CHANGEMENT : includedPrimaryTypes au lieu de includedTypes
+      ...(params.includedTypes && params.includedTypes.length > 0 && {
+        includedPrimaryTypes: params.includedTypes
+      }),
+      // 👈 CHANGEMENT : includedRegionCodes pour limiter à l'Égypte
+      includedRegionCodes: ["eg"],
+      // 👈 CHANGEMENT : languageCode
+      ...(params.languageCode && { languageCode: params.languageCode }),
+      // 👈 NOUVEAU : sessionToken pour optimiser les coûts
+      sessionToken: crypto.randomUUID(),
+      // 👈 NOUVEAU : locationRestriction avec un rectangle de l'Égypte
+      locationRestriction: {
+        rectangle: {
+          low: { latitude: 22.0, longitude: 24.7 },  // Sud-Ouest de l'Égypte
+          high: { latitude: 31.7, longitude: 36.9 }   // Nord-Est de l'Égypte
+        }
+      }
+    };
+
+    console.log('🔍 Requête autocomplétion (NOUVELLE API CORRIGÉE):', requestBody);
+
+    const requestHeaders = new Headers();
+    requestHeaders.set("Content-Type", "application/json");
+    requestHeaders.set("X-Goog-Api-Key", this.apiKey);
+    // 👈 CHANGEMENT : FieldMask simplifié selon ta doc
+    requestHeaders.set(
+      "X-Goog-FieldMask", 
+      "suggestions.placePrediction.text,suggestions.placePrediction.placeId"
+    );
+
+    const response = await fetch(
+      `${this.baseUrl}/v1/places:autocomplete`,
+      {
+        method: "POST",
+        headers: requestHeaders,
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Détails erreur:', errorText);
+      throw new Error(`Erreur API autocomplétion: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Résultats autocomplétion (nouvelle API):', data);
+    
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur autocomplétion:', error);
+    throw error;
+  }
 }
+
+
+
+}
+
