@@ -723,28 +723,7 @@ const getFallbackSuggestions = (value: string): string[] => {
             </h2>
             <div className="flex items-center gap-4">
               <span className="text-gray-600 dark:text-gray-400">
-                {filteredPlaces.length} résultat(s)
               </span>
-              {/* Bouton de débogage temporaire */}
-              <button
-                onClick={() => {
-                  console.log('🔍 DEBUG INFO:');
-                  console.log('Places totaux:', places.length);
-                  console.log('Places filtrés:', filteredPlaces.length);
-                  console.log('Filtres sélectionnés:', selectedTypes);
-                  console.log('Types dans places:', Array.from(new Set(places.flatMap(p => p.types || []))));
-                  console.log('Types dans filteredPlaces:', Array.from(new Set(filteredPlaces.flatMap(p => p.types || []))));
-                  
-                  // Compter par type
-                  const restaurants = places.filter(p => p.types?.includes('restaurant')).length;
-                  const hotels = places.filter(p => p.types?.includes('lodging')).length;
-                  const attractions = places.filter(p => p.types?.includes('tourist_attraction')).length;
-                  console.log('Répartition:', { restaurants, hotels, attractions });
-                }}
-                className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
-              >
-                🔍 Debug
-              </button>
             </div>
           </div>
 

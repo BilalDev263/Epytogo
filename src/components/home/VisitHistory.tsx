@@ -1,4 +1,4 @@
-// src/components/home/VisitHistory.tsx - VERSION SIMPLE avec rafraîchissement
+// src/components/home/VisitHistory.tsx - VERSION SANS AUTO-REFRESH
 "use client";
 
 import { useEffect, useState } from "react";
@@ -33,17 +33,18 @@ export function VisitHistory() {
     }
   };
 
+  // 🎯 CHANGEMENT : Charger seulement au montage du composant
   useEffect(() => {
     fetchVisits();
   }, [session]);
 
-  // 🎯 NOUVEAU : Rafraîchir l'historique toutes les 5 secondes pour détecter les nouvelles visites
-  useEffect(() => {
-    if (session?.user) {
-      const interval = setInterval(fetchVisits, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [session]);
+  // 🎯 SUPPRIMÉ : L'interval qui rechargeait toutes les 5 secondes
+  // useEffect(() => {
+  //   if (session?.user) {
+  //     const interval = setInterval(fetchVisits, 5000);
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [session]);
 
   if (!session?.user || loading) {
     return null;
@@ -53,7 +54,7 @@ export function VisitHistory() {
     return (
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border">
         <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-          🕐 Mon historique
+          🕐 Vos dernières visites
         </h3>
         <p className="text-gray-500 dark:text-gray-400 text-center py-4">
           Aucune visite récente. Cliquez sur un lieu pour commencer !
@@ -64,9 +65,19 @@ export function VisitHistory() {
 
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border">
-      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-        🕐 Mon historique ({visits.length})
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          🕐 Vos dernières visites ({visits.length})
+        </h3>
+        {/* 🆕 Bouton de rafraîchissement manuel */}
+        <button
+          onClick={fetchVisits}
+          className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+          title="Actualiser l'historique"
+        >
+          🔄 Actualiser
+        </button>
+      </div>
       <div className="space-y-2">
         {visits.map((visit) => (
           <div
