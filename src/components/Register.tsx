@@ -14,7 +14,7 @@ import { TermsAndConditions } from "./form/register/TermsAndConditions";
 import { PasswordFields } from "./form/register/PasswordFIeld";
 import { NameFields } from "./form/register/NameFields";
 import { EmailField } from "./form/register/EmailField";
-import { Carousel } from "@/components/Carousel";
+import { EgyptianCarousel } from "./EgyptianCarousel";
 
 export const Register = ({ className }: { className?: string }) => {
   const pathname = usePathname();
@@ -48,7 +48,7 @@ export const Register = ({ className }: { className?: string }) => {
 
   return (
     <div className="flex h-screen flex-col items-center justify-center lg:flex-row">
-      <Carousel className="w-4/6 text-white" />
+      <EgyptianCarousel className="w-4/6 text-white" />
       <ContainerForm handleSubmit={handleSubmit(save)} className="flex-1">
         <Title
           tag="h2"

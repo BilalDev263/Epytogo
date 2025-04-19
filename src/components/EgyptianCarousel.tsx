@@ -9,7 +9,7 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
-import { restaurantInfo } from "@/data/data";
+import { egyptianSites } from "@/data/data";
 
 type Props = {
   className?: string;
@@ -17,7 +17,7 @@ type Props = {
   stopOnInteraction?: boolean;
 };
 
-export const Carousel = ({
+export const EgyptianCarousel = ({
   className,
   delay = 6000,
   stopOnInteraction = true,
@@ -27,12 +27,12 @@ export const Carousel = ({
   return (
     <CarouselRoot className={className} plugins={[plugin.current]}>
       <CarouselContent>
-        {restaurantInfo.map(({ heroImgUrl, name, restaurantsId }) => (
-          <CarouselItem key={restaurantsId}>
+        {egyptianSites.map(({ heroImgUrl, name,description,id }) => (
+          <CarouselItem key={id}>
             <Card>
               <CardContent>
                 <Background
-                  description="lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, voluptatum."
+                  description={description}
                   image={heroImgUrl}
                   title={name}
                 />

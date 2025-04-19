@@ -69,14 +69,6 @@ export function VisitHistory() {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
           🕐 Vos dernières visites ({visits.length})
         </h3>
-        {/* 🆕 Bouton de rafraîchissement manuel */}
-        <button
-          onClick={fetchVisits}
-          className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-          title="Actualiser l'historique"
-        >
-          🔄 Actualiser
-        </button>
       </div>
       <div className="space-y-2">
         {visits.map((visit) => (
