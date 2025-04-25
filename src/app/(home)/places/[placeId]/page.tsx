@@ -1,3 +1,4 @@
+//[placeid]/pages.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,22 @@ import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PlacesImageService } from "@/services/PlacesImageService";
 
+type ReviewUI = {
+  id: string;                  
+  rating: number;
+  comment: string;
+  user: {
+    firstname: string;
+    lastname?: string;
+    image?: string;
+  };
+  userId?: string | null;       
+  source: "internal" | "google";
+  relative_time_description?: string;
+  time?: number;
+};
+
+
 export default function Page({ params }: { params: { placeId: string } }) {
   const { placeId } = params;
 
@@ -18,7 +35,7 @@ export default function Page({ params }: { params: { placeId: string } }) {
   const [error, setError] = useState<string | null>(null);
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>("");
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ReviewUI[]>([]);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
   const { data: session } = useSession();
@@ -54,13 +71,50 @@ export default function Page({ params }: { params: { placeId: string } }) {
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch(`/api/reviews/${placeId}`);
-      const data = await response.json();
-      setReviews(data);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des avis :", error);
+      // ← appelle ta nouvelle API consolidée
+      const res = await fetch(`/api/reviews/${placeId}?external=google`);
+      const data = await res.json();
+      
+      // Vérifier la structure de la réponse
+      const { internal = [], google = [] } = data;
+  
+      // ① Avis internes : on garde la forme actuelle
+      const transformedInternal: ReviewUI[] = internal.map((r: any) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        user: {
+          firstname: r.user.firstname,
+          lastname: r.user.lastname,
+          image: r.user.image,
+        },
+        userId: r.userId,
+        source: "internal" as const,
+      }));
+  
+      // ② Avis Google : on les convertit pour la même UI
+      const transformedGoogle: ReviewUI[] = google.map((g: any, index: number) => ({
+        id: `google-${g.time || index}`,      // un id pseudo-unique
+        rating: g.rating,
+        comment: g.text,
+        user: {
+          firstname: g.author_name,
+          image: g.profile_photo_url,
+        },
+        userId: null,
+        source: "google" as const,
+        relative_time_description: g.relative_time_description,
+        time: g.time,
+      }));
+  
+      // Combiner : Google en premier (plus "officiels"), puis internes
+      setReviews([...transformedGoogle, ...transformedInternal]);
+    } catch (err) {
+      console.error("Erreur lors de la récupération des avis :", err);
+      setReviews([]); // Réinitialiser en cas d'erreur
     }
   };
+  
 
   useEffect(() => {
     if (session?.user) {
@@ -229,51 +283,71 @@ export default function Page({ params }: { params: { placeId: string } }) {
           </div>
         </div>
 
-        {/* Section des avis */}
-        <div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
-          <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Avis</h3>
-          {reviews.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-400">Aucun avis pour cet endroit.</p>
-          ) : (
-            <ul className="space-y-4">
-              {reviews.map((review, index) => (
-                <li key={index} className="border-b border-gray-200 dark:border-gray-700 pb-4 flex items-start gap-4">
-                  {review.user.image && (
-                    <Image
-                      src={review.user.image}
-                      alt={`${review.user.firstname} ${review.user.lastname}`}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-                      width={48}
-                      height={48}
-                    />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-bold text-gray-900 dark:text-white">
-                      {review.user.firstname} {review.user.lastname}
-                    </p>
-                    <p className="text-gray-700 dark:text-gray-300">
-                      <strong className="text-gray-900 dark:text-white">Note :</strong>{" "}
-                      <span className="text-yellow-600 dark:text-yellow-400 font-semibold">
-                        {review.rating} / 5
-                      </span>
-                    </p>
-                    <p className="text-gray-700 dark:text-gray-300 mt-1">{review.comment}</p>
-
-                    {currentUser?.id === review.userId && (
-                      <Button
-                        onClick={() => handleEditReview(review)}
-                        className="flex items-center mt-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
-                        size="sm"
-                      >
-                        <Edit className="mr-2 h-4 w-4" /> Modifier
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+{/* Section des avis */}
+<div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+  <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Avis</h3>
+  {reviews.length === 0 ? (
+    <p className="text-gray-600 dark:text-gray-400">Aucun avis pour cet endroit.</p>
+  ) : (
+    <ul className="space-y-4">
+      {reviews.map((review, index) => (
+        <li key={review.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 flex items-start gap-4">
+          {review.user.image && (
+            <Image
+              src={review.user.image}
+              alt={`${review.user.firstname} ${review.user.lastname || ''}`}
+              className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+              width={48}
+              height={48}
+            />
           )}
-        </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <p className="font-bold text-gray-900 dark:text-white">
+                {review.user.firstname} {review.user.lastname}
+              </p>
+              {/* Badge pour distinguer les sources */}
+              {review.source === "google" ? (
+                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full font-medium">
+                  Google
+                </span>
+              ) : (
+                <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full font-medium">
+                  Vérifié
+                </span>
+              )}
+            </div>
+            <p className="text-gray-700 dark:text-gray-300">
+              <strong className="text-gray-900 dark:text-white">Note :</strong>{" "}
+              <span className="text-yellow-600 dark:text-yellow-400 font-semibold">
+                {review.rating} / 5
+              </span>
+            </p>
+            <p className="text-gray-700 dark:text-gray-300 mt-1">{review.comment}</p>
+
+            {/* Afficher la date pour les avis Google */}
+            {review.source === "google" && review.relative_time_description && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {review.relative_time_description}
+              </p>
+            )}
+
+            {/* Bouton modifier seulement pour les avis internes de l'utilisateur actuel */}
+            {review.source === "internal" && currentUser?.id === review.userId && (
+              <Button
+                onClick={() => handleEditReview(review)}
+                className="flex items-center mt-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
+                size="sm"
+              >
+                <Edit className="mr-2 h-4 w-4" /> Modifier
+              </Button>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
 
         {/* Formulaire d'ajout d'avis */}
         <div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">

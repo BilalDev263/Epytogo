@@ -1,6 +1,4 @@
 // src/services/GeminiGoogleService.ts
-import { Service } from './Service';
-
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;

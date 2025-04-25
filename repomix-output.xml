@@ -87,6 +87,7 @@ src/app/(home)/page.tsx
 src/app/(home)/places/[placeId]/page.tsx
 src/app/api/auth/[...nextauth]/route.ts
 src/app/api/reviews/[placeId]/route.ts
+src/app/api/visits/route.ts
 src/app/auth/activation/[jwt]/page.tsx
 src/app/auth/login/page.tsx
 src/app/globals.css
@@ -95,7 +96,7 @@ src/app/register/page.tsx
 src/auth/auth.ts
 src/auth/jwt.ts
 src/components/Background.tsx
-src/components/Carousel.tsx
+src/components/EgyptianCarousel.tsx
 src/components/form/ContainerForm.tsx
 src/components/form/PasswordStrength.tsx
 src/components/form/profile/UpdateEmail.tsx
@@ -111,6 +112,7 @@ src/components/Header.tsx
 src/components/home/CustomCard.tsx
 src/components/home/Home.tsx
 src/components/home/SkeletonCard.tsx
+src/components/home/VisitHistory.tsx
 src/components/Login.tsx
 src/components/navigation/HomeNav.tsx
 src/components/navigation/types.ts
@@ -137,6 +139,7 @@ src/components/Welcome.tsx
 src/data/data.ts
 src/db/prisma.ts
 src/db/user.ts
+src/db/visit.ts
 src/emails/mail.ts
 src/emails/templates/Welcome.tsx
 src/hooks/useNavigation.tsx
@@ -7600,41 +7603,6 @@ ALTER TABLE `Favorite` ADD COLUMN `address` VARCHAR(191) NOT NULL,
 provider = "mysql"
 </file>
 
-<file path="prisma/schema.prisma">
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
-}
-
-model User {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  firstname     String
-  lastname      String
-  email         String   @unique
-  password      String
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  reviews       Review[]
-}
-
-model Review {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  rating    Int
-  comment   String
-  placeId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String   @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
-}
-</file>
-
 <file path="public/next.svg">
 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
 </file>
@@ -7879,14 +7847,6 @@ export default function HomePage() {
 }
 </file>
 
-<file path="src/app/api/auth/[...nextauth]/route.ts">
-import NextAuth from "next-auth/next";
-import { authOptions } from "@/auth/auth";
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
-</file>
-
 <file path="src/app/api/reviews/[placeId]/route.ts">
 import { PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
@@ -8018,6 +7978,54 @@ export async function PUT(
       { error: "Failed to update review" },
       { status: 500 }
     );
+  }
+}
+</file>
+
+<file path="src/app/api/visits/route.ts">
+// src/app/api/visits/route.ts - VERSION SIMPLE
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
+import { getLastVisits, recordVisit } from "@/db/visit";
+
+// Récupérer l'historique des visites
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  
+  if (!session?.user?.id) {
+    return NextResponse.json({ visits: [] });
+  }
+
+  const visits = await getLastVisits(session.user.id);
+  return NextResponse.json({ visits });
+}
+
+// Enregistrer une nouvelle visite
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Non connecté" }, { status: 401 });
+    }
+
+    const { placeId, placeName } = await request.json();
+    
+    if (!placeId || !placeName) {
+      return NextResponse.json({ error: "placeId et placeName requis" }, { status: 400 });
+    }
+
+    await recordVisit(session.user.id, placeId, placeName);
+    
+    return NextResponse.json({ 
+      success: true,
+      message: "Visite enregistrée avec succès" 
+    });
+
+  } catch (error) {
+    console.error("Erreur API visits POST:", error);
+    return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }
 </file>
@@ -8502,7 +8510,7 @@ export const Background = ({ className, image, title, description }: Props) => {
 };
 </file>
 
-<file path="src/components/Carousel.tsx">
+<file path="src/components/EgyptianCarousel.tsx">
 import Autoplay from "embla-carousel-autoplay";
 import { useRef } from "react";
 
@@ -8514,7 +8522,7 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
-import { restaurantInfo } from "@/data/data";
+import { egyptianSites } from "@/data/data";
 
 type Props = {
   className?: string;
@@ -8522,7 +8530,7 @@ type Props = {
   stopOnInteraction?: boolean;
 };
 
-export const Carousel = ({
+export const EgyptianCarousel = ({
   className,
   delay = 6000,
   stopOnInteraction = true,
@@ -8532,12 +8540,12 @@ export const Carousel = ({
   return (
     <CarouselRoot className={className} plugins={[plugin.current]}>
       <CarouselContent>
-        {restaurantInfo.map(({ heroImgUrl, name, restaurantsId }) => (
-          <CarouselItem key={restaurantsId}>
+        {egyptianSites.map(({ heroImgUrl, name,description,id }) => (
+          <CarouselItem key={id}>
             <Card>
               <CardContent>
                 <Background
-                  description="lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, voluptatum."
+                  description={description}
                   image={heroImgUrl}
                   title={name}
                 />
@@ -9341,86 +9349,6 @@ export const SkeletonCard = ({ className }: { className?: string }) => {
 };
 </file>
 
-<file path="src/components/Login.tsx">
-"use client";
-import { Input } from "@/components/ui/input";
-import { usePathname } from "next/navigation";
-import { ContainerForm } from "./form/ContainerForm";
-import { Title } from "@/components/ui/title";
-import { AuthLink } from "./form/Redirection";
-import { SubmitHandler, useForm } from "react-hook-form";
-import { LoginPayload, loginSchema } from "@/validators/loginSchema";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Carousel } from "@/components/Carousel";
-import { SubmitButton } from "./form/SubmitButton";
-import { useUserQuery } from "@/hooks/useUserQuery";
-
-type Props = {
-  className?: string;
-  callbackUrl?: string;
-};
-
-export const Login = ({ className, callbackUrl }: Props) => {
-  const pathname = usePathname();
-  const isRegisterPage = pathname === "/register";
-  const { loginUser } = useUserQuery();
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginPayload>({
-    resolver: zodResolver(loginSchema),
-  });
-
-  const save: SubmitHandler<LoginPayload> = async (data) =>
-    await loginUser({
-      data,
-      reset,
-      callbackUrl,
-    });
-
-  return (
-    <div className="flex h-screen flex-col items-center justify-center lg:flex-row">
-      <Carousel className="w-4/6 text-white" />
-      <ContainerForm handleSubmit={handleSubmit(save)} className="flex-1">
-        <Title
-          tag="h2"
-          className="w-full text-start text-2xl font-semibold tracking-tight"
-        >
-          Connectez-vous
-        </Title>
-
-        <Input
-          className="h-12 w-full"
-          placeholder="Entrez votre email"
-          type="email"
-          aria-label="Adresse e-mail"
-          error={errors.email?.message}
-          {...register("email")}
-        />
-        <Input
-          className="h-12 w-full"
-          placeholder="Entrez votre mot de passe"
-          type="password"
-          aria-label="Mot de passe"
-          error={errors.password?.message}
-          {...register("password")}
-        />
-
-        <div className="flex items-center w-full justify-between">
-          <AuthLink isRegisterPage={isRegisterPage} />
-          <SubmitButton
-            label={isSubmitting ? "Chargement..." : "Se connecter"}
-            disabled={isSubmitting}
-          />
-        </div>
-      </ContainerForm>
-    </div>
-  );
-};
-</file>
-
 <file path="src/components/navigation/HomeNav.tsx">
 // src/components/navigation/HomeNav.tsx - Version modernisée
 import { cn } from "@/lib/utils";
@@ -9562,87 +9490,6 @@ export const Profile = ({ trigger, onOpenChange }: Props) => {
         </div>
       </div>
     </Modal>
-  );
-};
-</file>
-
-<file path="src/components/Register.tsx">
-"use client";
-import React, { useEffect, useState } from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
-import { usePathname } from "next/navigation";
-import { useUserQuery } from "@/hooks/useUserQuery";
-import { ContainerForm } from "./form/ContainerForm";
-import { AuthLink } from "./form/Redirection";
-import { Title } from "./ui/title";
-import { RegisterPayload, RegisterSchema } from "@/validators/registerSchema";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { passwordStrength } from "check-password-strength";
-import { SubmitButton } from "./form/SubmitButton";
-import { TermsAndConditions } from "./form/register/TermsAndConditions";
-import { PasswordFields } from "./form/register/PasswordFIeld";
-import { NameFields } from "./form/register/NameFields";
-import { EmailField } from "./form/register/EmailField";
-import { Carousel } from "@/components/Carousel";
-
-export const Register = ({ className }: { className?: string }) => {
-  const pathname = usePathname();
-  const isRegisterPage = pathname === "/register";
-  const [strength, setStrength] = useState(0);
-  const { registerUser } = useUserQuery();
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    control,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterPayload>({
-    resolver: zodResolver(RegisterSchema),
-  });
-
-  const password = watch("password");
-
-  useEffect(() => {
-    if (password) setStrength(passwordStrength(password).id);
-  }, [password]);
-
-  const save: SubmitHandler<RegisterPayload> = async (data) => {
-    await registerUser({
-      data,
-      reset,
-    });
-  };
-
-  return (
-    <div className="flex h-screen flex-col items-center justify-center lg:flex-row">
-      <Carousel className="w-4/6 text-white" />
-      <ContainerForm handleSubmit={handleSubmit(save)} className="flex-1">
-        <Title
-          tag="h2"
-          className="w-full text-start text-2xl font-semibold tracking-tight"
-        >
-          Inscrivez-vous
-        </Title>
-        <NameFields register={register} errors={errors} />
-        <EmailField register={register} errors={errors} />
-        <PasswordFields
-          register={register}
-          errors={errors}
-          strength={strength}
-        />
-
-        <div className="flex items-center w-full">
-          <TermsAndConditions control={control} errors={errors} />
-          <SubmitButton
-            label={isSubmitting ? "Chargement..." : "S'inscrire"}
-            disabled={isSubmitting}
-          />
-        </div>
-        <AuthLink isRegisterPage={isRegisterPage} />
-      </ContainerForm>
-    </div>
   );
 };
 </file>
@@ -11102,245 +10949,6 @@ export const Welcome = ({ title, description }: Props) => {
 };
 </file>
 
-<file path="src/data/data.ts">
-export const restaurantInfo = [
-  {
-    averageRating: 5,
-    awardInfo: {
-      year: 2023,
-      awardType: "COE",
-    },
-    currentOpenStatusCategory: "CLOSED",
-    currentOpenStatusText: "Closed Now",
-    distanceTo: null,
-    establishmentTypeAndCuisineTags: ["Chinese", "Japanese", "Sushi", "Asian"],
-    hasMenu: true,
-    heroImgRawHeight: 1200,
-    heroImgRawWidth: 1694,
-    heroImgUrl:
-      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0c/9b/cf/47/bar.jpg?w=1600&h=1200&s=1",
-    isDifferentGeo: false,
-    isLocalChefItem: false,
-    isPremium: false,
-    isStoryboardPublished: false,
-    locationId: 10539996,
-    menuUrl: "https://bit.ly/3R7sjh7",
-    name: "Epytogo",
-    offers: {
-      hasDelivery: false,
-      hasReservation: true,
-      slot2Offer: null,
-      restaurantSpecialOffer: null,
-      slot1Offer: null,
-    },
-    parentGeoName: "Mumbai",
-    priceTag: "$$$$",
-    restaurantsId: "restaurant_001_dashanzi_mumbai",
-    reviewSnippets: {
-      reviewSnippetsList: [],
-    },
-    squareImgRawLength: 0,
-    squareImgUrl:
-      "https://dynamic-media-cdn.tripadvisor.com/media/photo-s/0c/9b/cf/47/bar.jpg?w=300&h=300",
-  },
-  {
-    averageRating: 5,
-    awardInfo: {
-      year: 2023,
-      awardType: "COE",
-    },
-    currentOpenStatusCategory: "CLOSED",
-    currentOpenStatusText: "Closed Now",
-    distanceTo: null,
-    establishmentTypeAndCuisineTags: ["Chinese", "Japanese", "Sushi", "Asian"],
-    hasMenu: true,
-    heroImgRawHeight: 1200,
-    heroImgRawWidth: 1694,
-    heroImgUrl:
-      "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    isDifferentGeo: false,
-    isLocalChefItem: false,
-    isPremium: false,
-    isStoryboardPublished: false,
-    locationId: 10539996,
-    menuUrl: "https://bit.ly/3R7sjh7",
-    name: "Dashanzi",
-    offers: {
-      hasDelivery: false,
-      hasReservation: true,
-      slot2Offer: null,
-      restaurantSpecialOffer: null,
-      slot1Offer: null,
-    },
-    parentGeoName: "Mumbai",
-    priceTag: "$$$$",
-    restaurantsId: "restaurant_002_dashanzi_mumbai",
-    reviewSnippets: {
-      reviewSnippetsList: [],
-    },
-    squareImgRawLength: 0,
-    squareImgUrl:
-      "https://dynamic-media-cdn.tripadvisor.com/media/photo-s/0c/9b/cf/47/bar.jpg?w=300&h=300",
-  },
-  {
-    averageRating: 5,
-    awardInfo: {
-      year: 2023,
-      awardType: "COE",
-    },
-    currentOpenStatusCategory: "CLOSED",
-    currentOpenStatusText: "Closed Now",
-    distanceTo: null,
-    establishmentTypeAndCuisineTags: ["Chinese", "Japanese", "Sushi", "Asian"],
-    hasMenu: true,
-    heroImgRawHeight: 1200,
-    heroImgRawWidth: 1694,
-    heroImgUrl:
-      "https://plus.unsplash.com/premium_photo-1661953124283-76d0a8436b87?q=80&w=2088&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    isDifferentGeo: false,
-    isLocalChefItem: false,
-    isPremium: false,
-    isStoryboardPublished: false,
-    locationId: 10539996,
-    menuUrl: "https://bit.ly/3R7sjh7",
-    name: "Dashanzi",
-    offers: {
-      hasDelivery: false,
-      hasReservation: true,
-      slot2Offer: null,
-      restaurantSpecialOffer: null,
-      slot1Offer: null,
-    },
-    parentGeoName: "Mumbai",
-    priceTag: "$$$$",
-    restaurantsId: "restaurant_003_dashanzi_mumbai",
-    reviewSnippets: {
-      reviewSnippetsList: [],
-    },
-    squareImgRawLength: 0,
-    squareImgUrl:
-      "https://dynamic-media-cdn.tripadvisor.com/media/photo-s/0c/9b/cf/47/bar.jpg?w=300&h=300",
-  },
-  {
-    averageRating: 5,
-    awardInfo: {
-      year: 2023,
-      awardType: "COE",
-    },
-    currentOpenStatusCategory: "CLOSED",
-    currentOpenStatusText: "Closed Now",
-    distanceTo: null,
-    establishmentTypeAndCuisineTags: ["Chinese", "Japanese", "Sushi", "Asian"],
-    hasMenu: true,
-    heroImgRawHeight: 1200,
-    heroImgRawWidth: 1694,
-    heroImgUrl:
-      "https://images.unsplash.com/photo-1678009859747-9f4620e0c355?q=80&w=2051&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    isDifferentGeo: false,
-    isLocalChefItem: false,
-    isPremium: false,
-    isStoryboardPublished: false,
-    locationId: 10539996,
-    menuUrl: "https://bit.ly/3R7sjh7",
-    name: "Dashanzi",
-    offers: {
-      hasDelivery: false,
-      hasReservation: true,
-      slot2Offer: null,
-      restaurantSpecialOffer: null,
-      slot1Offer: null,
-    },
-    parentGeoName: "Mumbai",
-    priceTag: "$$$$",
-    restaurantsId: "restaurant_004_dashanzi_mumbai",
-    reviewSnippets: {
-      reviewSnippetsList: [],
-    },
-    squareImgRawLength: 0,
-    squareImgUrl:
-      "https://dynamic-media-cdn.tripadvisor.com/media/photo-s/0c/9b/cf/47/bar.jpg?w=300&h=300",
-  },
-  {
-    averageRating: 5,
-    awardInfo: {
-      year: 2023,
-      awardType: "COE",
-    },
-    currentOpenStatusCategory: "CLOSED",
-    currentOpenStatusText: "Closed Now",
-    distanceTo: null,
-    establishmentTypeAndCuisineTags: ["Chinese", "Japanese", "Sushi", "Asian"],
-    hasMenu: true,
-    heroImgRawHeight: 1200,
-    heroImgRawWidth: 1694,
-    heroImgUrl:
-      "https://images.unsplash.com/photo-1530731141654-5993c3016c77?w=800&dpr=2&q=80",
-    isDifferentGeo: false,
-    isLocalChefItem: false,
-    isPremium: false,
-    isStoryboardPublished: false,
-    locationId: 10539996,
-    menuUrl: "https://bit.ly/3R7sjh7",
-    name: "Dashanzi",
-    offers: {
-      hasDelivery: false,
-      hasReservation: true,
-      slot2Offer: null,
-      restaurantSpecialOffer: null,
-      slot1Offer: null,
-    },
-    parentGeoName: "Mumbai",
-    priceTag: "$$$$",
-    restaurantsId: "restaurant_005_dashanzi_mumbai",
-    reviewSnippets: {
-      reviewSnippetsList: [],
-    },
-    squareImgRawLength: 0,
-    squareImgUrl:
-      "https://dynamic-media-cdn.tripadvisor.com/media/photo-s/0c/9b/cf/47/bar.jpg?w=300&h=300",
-  },
-  {
-    averageRating: 5,
-    awardInfo: {
-      year: 2023,
-      awardType: "COE",
-    },
-    currentOpenStatusCategory: "CLOSED",
-    currentOpenStatusText: "Closed Now",
-    distanceTo: null,
-    establishmentTypeAndCuisineTags: ["Chinese", "Japanese", "Sushi", "Asian"],
-    hasMenu: true,
-    heroImgRawHeight: 1200,
-    heroImgRawWidth: 1694,
-    heroImgUrl:
-      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0c/9b/cf/47/bar.jpg?w=1600&h=1200&s=1",
-    isDifferentGeo: false,
-    isLocalChefItem: false,
-    isPremium: false,
-    isStoryboardPublished: false,
-    locationId: 10539996,
-    menuUrl: "https://bit.ly/3R7sjh7",
-    name: "Dashanzi",
-    offers: {
-      hasDelivery: false,
-      hasReservation: true,
-      slot2Offer: null,
-      restaurantSpecialOffer: null,
-      slot1Offer: null,
-    },
-    parentGeoName: "Mumbai",
-    priceTag: "$$$$",
-    restaurantsId: "restaurant_006_dashanzi_mumbai",
-    reviewSnippets: {
-      reviewSnippetsList: [],
-    },
-    squareImgRawLength: 0,
-    squareImgUrl:
-      "https://dynamic-media-cdn.tripadvisor.com/media/photo-s/0c/9b/cf/47/bar.jpg?w=300&h=300",
-  },
-];
-</file>
-
 <file path="src/db/prisma.ts">
 import { PrismaClient } from "@prisma/client";
 
@@ -11407,6 +11015,47 @@ export const updateUser = async (id: string, user: Partial<User>) => {
     }
   }
 };
+</file>
+
+<file path="src/db/visit.ts">
+// src/db/visit.ts - VERSION SIMPLE
+import db from "./prisma";
+
+// Enregistrer une visite (remplace si existe déjà)
+export async function recordVisit(userId: string, placeId: string, placeName: string) {
+  try {
+    await db.visit.upsert({
+      where: {
+        userId_placeId: { userId, placeId }
+      },
+      update: {
+        visitedAt: new Date()
+      },
+      create: {
+        userId,
+        placeId,
+        placeName,
+        visitedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error("Erreur enregistrement visite:", error);
+  }
+}
+
+// Récupérer les 5 dernières visites
+export async function getLastVisits(userId: string) {
+  try {
+    return await db.visit.findMany({
+      where: { userId },
+      orderBy: { visitedAt: 'desc' },
+      take: 5
+    });
+  } catch (error) {
+    console.error("Erreur récupération visites:", error);
+    return [];
+  }
+}
 </file>
 
 <file path="src/emails/mail.ts">
@@ -12356,6 +12005,55 @@ repomix-output.xml
 }
 </file>
 
+<file path="prisma/schema.prisma">
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  firstname     String
+  lastname      String
+  email         String   @unique
+  password      String
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  reviews       Review[]
+  visits        Visit[]  // Nouvelle relation pour l'historique des visites
+}
+
+model Review {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  rating    Int
+  comment   String
+  placeId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// Modèle simple pour l'historique des visites
+model Visit {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  placeId   String   // Google Places ID
+  placeName String   // Nom de l'établissement
+  visitedAt DateTime @default(now())
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId, visitedAt(sort: Desc)])
+  @@unique([userId, placeId])
+}
+</file>
+
 <file path="src/app/(home)/places/[placeId]/page.tsx">
 "use client";
 
@@ -12683,372 +12381,162 @@ export default function Page({ params }: { params: { placeId: string } }) {
 }
 </file>
 
-<file path="src/components/TravelChatbot.tsx">
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, MapPin, Utensils, Hotel, Camera, Sparkles } from 'lucide-react';
-import { GeminiGoogleService, ChatMessage } from '@/services/GeminiGoogleService';
+<file path="src/app/api/auth/[...nextauth]/route.ts">
+import NextAuth from "next-auth/next";
+import { authOptions } from "@/auth/auth";
 
-interface Message {
-  id: string;
-  type: 'user' | 'bot';
-  content: string;
-  timestamp: Date;
-  recommendations?: {
-    hotel?: any;
-    restaurant?: any;
-    attraction?: any;
-    location?: string;
-  } | null;
-  dynamicTitles?: {
-    hotel?: string;
-    restaurant?: string;
-    attraction?: string;
-  } | null;
-}
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST, authOptions };
+</file>
 
-interface ChatbotProps {
-  onRecommendation?: (recommendations: any) => void;
-  onPlaceClick?: (placeId: string, placeType: 'hotel' | 'restaurant' | 'attraction') => void;
-}
+<file path="src/components/Register.tsx">
+"use client";
+import React, { useEffect, useState } from "react";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { usePathname } from "next/navigation";
+import { useUserQuery } from "@/hooks/useUserQuery";
+import { ContainerForm } from "./form/ContainerForm";
+import { AuthLink } from "./form/Redirection";
+import { Title } from "./ui/title";
+import { RegisterPayload, RegisterSchema } from "@/validators/registerSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { passwordStrength } from "check-password-strength";
+import { SubmitButton } from "./form/SubmitButton";
+import { TermsAndConditions } from "./form/register/TermsAndConditions";
+import { PasswordFields } from "./form/register/PasswordFIeld";
+import { NameFields } from "./form/register/NameFields";
+import { EmailField } from "./form/register/EmailField";
+import { EgyptianCarousel } from "./EgyptianCarousel";
 
-const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'bot',
-      content: "🐪 Ahlan wa sahlan ! Je suis Anubis, votre guide personnel pour l'Égypte ! Je connais tous les secrets de mes terres : des pyramides de Gizeh aux temples de Louxor, des restaurants cachés du Caire aux hôtels de rêve d'Assouan. Que puis-je vous faire découvrir aujourd'hui ? 🏺✨",
-      timestamp: new Date()
-    }
-  ]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+export const Register = ({ className }: { className?: string }) => {
+  const pathname = usePathname();
+  const isRegisterPage = pathname === "/register";
+  const [strength, setStrength] = useState(0);
+  const { registerUser } = useUserQuery();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterPayload>({
+    resolver: zodResolver(RegisterSchema),
+  });
+
+  const password = watch("password");
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (password) setStrength(passwordStrength(password).id);
+  }, [password]);
 
-  // Fonction pour vérifier si la demande concerne l'Égypte - Version minimaliste
-  const isEgyptRelated = (message: string): boolean => {
-    const basicEgyptKeywords = [
-      'egypt', 'égypte', 'pyramide', 'pharaon', 'nil'
-    ];
-    
-    // Accepter les messages qui contiennent des mots-clés de base OU sont assez longs pour contenir des noms de lieux
-    return basicEgyptKeywords.some(keyword => 
-      message.toLowerCase().includes(keyword)
-    ) || message.length > 15; // Donner une chance aux messages longs d'être analysés par l'API
-  };
-
-  // Fonction pour gérer les clics sur les recommandations
-  const handlePlaceClick = (place: any, type: 'hotel' | 'restaurant' | 'attraction') => {
-    if (onPlaceClick && place.place_id) {
-      onPlaceClick(place.place_id, type);
-    } else if (place.name) {
-      // Fallback : recherche par nom si pas de place_id
-      window.open(`https://www.google.com/maps/search/${encodeURIComponent(place.name + ' Egypt')}`, '_blank');
-    }
-  };
-
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    // Vérification préalable si la demande concerne l'Égypte
-    if (!isEgyptRelated(inputMessage)) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        type: 'user',
-        content: inputMessage,
-        timestamp: new Date()
-      };
-
-      const botResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'bot',
-        content: "🏺 Pardonnez-moi, je ne guide qu'en terre d'Égypte ! Puis-je vous aider à découvrir nos merveilles ? Essayez de me parler du Caire, d'Alexandrie, de Luxor ou de nos sites légendaires ! 🐪",
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, userMessage, botResponse]);
-      setInputMessage('');
-      return;
-    }
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: inputMessage,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    
-    const newConversationHistory = [
-      ...conversationHistory,
-      { role: 'user' as const, content: inputMessage }
-    ];
-    setConversationHistory(newConversationHistory);
-    
-    setInputMessage('');
-    setIsTyping(true);
-
-    try {
-      const aiResponse = await GeminiGoogleService.sendMessage(newConversationHistory);
-      
-      setConversationHistory([
-        ...newConversationHistory,
-        { role: 'assistant' as const, content: aiResponse.message }
-      ]);
-
-      const botResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'bot',
-        content: aiResponse.message,
-        timestamp: new Date(),
-        recommendations: aiResponse.recommendations,
-        dynamicTitles: aiResponse.dynamicTitles // Titres générés par Gemini
-      };
-
-      setMessages(prev => [...prev, botResponse]);
-
-      if (onRecommendation && aiResponse.recommendations) {
-        onRecommendation(aiResponse.recommendations);
-      }
-
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
-      
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'bot',
-        content: "🏺 Pardonnez-moi, les vents du désert perturbent ma connexion ! Pouvez-vous répéter ?",
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // Fonction pour obtenir l'icône appropriée basée sur le titre dynamique
-  const getIconForTitle = (title: string) => {
-    if (title.includes('Neptune') || title.includes('mer') || title.includes('🐟')) {
-      return <span className="text-blue-500">🐟</span>;
-    }
-    if (title.includes('Palais') || title.includes('👑')) {
-      return <span className="text-yellow-500">👑</span>;
-    }
-    if (title.includes('Refuge') || title.includes('🎒')) {
-      return <span className="text-green-500">🎒</span>;
-    }
-    if (title.includes('pharaon') || title.includes('🏛️')) {
-      return <span className="text-amber-500">🏛️</span>;
-    }
-    if (title.includes('aventur') || title.includes('explorateur')) {
-      return <span className="text-purple-500">🗺️</span>;
-    }
-    return null;
+  const save: SubmitHandler<RegisterPayload> = async (data) => {
+    await registerUser({
+      data,
+      reset,
+    });
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {/* Bouton flottant avec pyramide */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="bg-black hover:bg-gray-900 text-yellow-400 rounded-full p-4 shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-yellow-600"
+    <div className="flex h-screen flex-col items-center justify-center lg:flex-row">
+      <EgyptianCarousel className="w-4/6 text-white" />
+      <ContainerForm handleSubmit={handleSubmit(save)} className="flex-1">
+        <Title
+          tag="h2"
+          className="w-full text-start text-2xl font-semibold tracking-tight"
         >
-          <svg 
-            className="h-7 w-7" 
-            viewBox="0 0 24 24" 
-            fill="currentColor"
-          >
-            <path d="M12 2L2 22h20L12 2zm0 3.84L19.16 20H4.84L12 5.84z"/>
-            <path d="M12 5.84L16.58 18H7.42L12 5.84z" opacity="0.7"/>
-          </svg>
-        </button>
-      )}
+          Inscrivez-vous
+        </Title>
+        <NameFields register={register} errors={errors} />
+        <EmailField register={register} errors={errors} />
+        <PasswordFields
+          register={register}
+          errors={errors}
+          strength={strength}
+        />
 
-      {/* Interface de chat */}
-      {isOpen && (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-96 h-[600px] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden">
-          {/* En-tête */}
-          <div className="bg-gradient-to-r from-yellow-600 via-yellow-700 to-amber-800 text-white p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-black/30 rounded-full flex items-center justify-center border border-yellow-400">
-                <svg className="h-6 w-6 text-yellow-300" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 22h20L12 2zm0 3.84L19.16 20H4.84L12 5.84z"/>
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold">Anubis - Guide Égyptien</h3>
-                <p className="text-sm text-yellow-100">En ligne • Spécialiste Égypte uniquement 🇪🇬</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[80%] ${
-                  message.type === 'user'
-                    ? 'bg-yellow-600 text-white rounded-2xl rounded-br-md'
-                    : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md shadow-md border-l-4 border-yellow-600'
-                } px-4 py-3`}>
-                  <p className="text-sm">{message.content}</p>
-                  
-                  {/* Recommandations avec titres 100% dynamiques de Gemini */}
-                  {message.recommendations && message.dynamicTitles && (
-                    <div className="mt-4 space-y-3">
-                      {/* Hôtel - Titre dynamique de Gemini */}
-                      {message.recommendations.hotel && message.dynamicTitles.hotel && (
-                        <div 
-                          className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 border border-yellow-200 dark:border-yellow-700 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors"
-                          onClick={() => handlePlaceClick(message.recommendations!.hotel, 'hotel')}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            {getIconForTitle(message.dynamicTitles.hotel) || <Hotel className="h-4 w-4 text-yellow-600" />}
-                            <span className="font-semibold text-yellow-800 dark:text-yellow-300">
-                              {message.dynamicTitles.hotel}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-auto">👆 Cliquez pour voir</span>
-                          </div>
-                          <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.hotel?.name}</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.hotel?.description}</p>
-                          <div className="flex justify-between items-center mt-2">
-                            <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.hotel?.rating}</span>
-                            <span className="text-sm font-medium text-yellow-600">{message.recommendations.hotel?.price}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Restaurant - Titre dynamique de Gemini */}
-                      {message.recommendations.restaurant && message.dynamicTitles.restaurant && (
-                        <div 
-                          className="bg-orange-50 dark:bg-orange-900/30 rounded-lg p-3 border border-orange-200 dark:border-orange-700 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors"
-                          onClick={() => handlePlaceClick(message.recommendations!.restaurant, 'restaurant')}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            {getIconForTitle(message.dynamicTitles.restaurant) || <Utensils className="h-4 w-4 text-orange-600" />}
-                            <span className="font-semibold text-orange-800 dark:text-orange-300">
-                              {message.dynamicTitles.restaurant}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-auto">👆 Cliquez pour voir</span>
-                          </div>
-                          <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.restaurant?.name}</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.restaurant?.description}</p>
-                          <div className="flex justify-between items-center mt-2">
-                            <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.restaurant?.rating}</span>
-                            <span className="text-sm text-gray-500">{message.recommendations.restaurant?.cuisine} • {message.recommendations.restaurant?.price}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Attraction - Titre dynamique de Gemini */}
-                      {message.recommendations.attraction && message.dynamicTitles.attraction && (
-                        <div 
-                          className="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-3 border border-amber-200 dark:border-amber-700 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
-                          onClick={() => handlePlaceClick(message.recommendations!.attraction, 'attraction')}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            {getIconForTitle(message.dynamicTitles.attraction) || <Camera className="h-4 w-4 text-amber-600" />}
-                            <span className="font-semibold text-amber-800 dark:text-amber-300">
-                              {message.dynamicTitles.attraction}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-auto">👆 Cliquez pour voir</span>
-                          </div>
-                          <h4 className="font-medium text-gray-900 dark:text-white">{message.recommendations.attraction?.name}</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">{message.recommendations.attraction?.description}</p>
-                          <div className="flex justify-between items-center mt-2">
-                            <span className="text-sm font-medium text-green-600">⭐ {message.recommendations.attraction?.rating}</span>
-                            <span className="text-sm text-gray-500">{message.recommendations.attraction?.type}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  <p className="text-xs opacity-70 mt-2">
-                    {message.timestamp.toLocaleTimeString('fr-FR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </p>
-                </div>
-              </div>
-            ))}
-
-            {/* Indicateur de frappe */}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-white dark:bg-gray-700 rounded-2xl rounded-bl-md shadow-md px-4 py-3">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Zone de saisie */}
-          <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex gap-2">
-              <textarea
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Explorez l'Égypte avec moi ! (Le Caire, Alexandrie, Luxor...) 🐪"
-                className="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-500 focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                rows={2}
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={!inputMessage.trim() || isTyping}
-                className="self-end bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-400 text-white rounded-lg p-2 transition-colors"
-              >
-                <Send className="h-4 w-4" />
-              </button>
-            </div>
-            {/* Indication claire que seule l'Égypte est supportée */}
-            <p className="text-xs text-gray-500 mt-1 text-center">
-              🇪🇬 Guide spécialisé Égypte uniquement
-            </p>
-          </div>
+        <div className="flex items-center w-full">
+          <TermsAndConditions control={control} errors={errors} />
+          <SubmitButton
+            label={isSubmitting ? "Chargement..." : "S'inscrire"}
+            disabled={isSubmitting}
+          />
         </div>
-      )}
+        <AuthLink isRegisterPage={isRegisterPage} />
+      </ContainerForm>
     </div>
   );
 };
+</file>
 
-export default TravelChatbot;
+<file path="src/data/data.ts">
+// src/data/egyptianSites.ts - Nouvelles données pour le carousel
+export const egyptianSites = [
+  {
+    id: 1,
+    name: "Pyramides de Gizeh",
+    description: "Les dernières merveilles du monde antique encore debout, gardant les secrets des pharaons depuis plus de 4500 ans.",
+    heroImgUrl: "https://static.nationalgeographic.fr/files/styles/image_3200/public/giza-plateau-pyramids.webp?w=1600&h=900", // Pyramides de Gizeh
+    location: "Gizeh, Égypte",
+    period: "Ancien Empire (2580-2510 av. J.-C.)",
+    hieroglyph: "𓉴𓂋𓏠𓈖"
+  },
+  {
+    id: 2,
+    name: "Le Grand Sphinx",
+    description: "Gardien mystérieux du plateau de Gizeh, cette créature mi-homme mi-lion veille sur les pyramides depuis l'aube des temps.",
+    heroImgUrl: "https://www.connaissancedesarts.com/wp-content/thumbnails/uploads/2023/11/cda32_actu_gizeh_main-tt-width-1280-height-720-fill-1-crop-0-bgcolor-ffffff.jpg", // Sphinx
+    location: "Gizeh, Égypte",
+    period: "Ancien Empire (vers 2558-2532 av. J.-C.)",
+    hieroglyph: "𓎛𓅱𓇯"
+  },
+  {
+    id: 3,
+    name: "Le Nil près d'Assouan",
+    description: "Fleuve légendaire, source de vie de l'Égypte. Ses crues annuelles ont nourri la civilisation pharaonique pendant des millénaires.",
+    heroImgUrl: "https://static.nationalgeographic.fr/files/styles/image_3200/public/egypttempletreasureslead.webp?w=1600&h=900", // Le Nil
+    location: "Assouan, Égypte",
+    period: "Éternel",
+    hieroglyph: "𓇋𓏏𓂋"
+  },
+  {
+    id: 4,
+    name: "Temple de Karnak",
+    description: "Le plus grand complexe religieux de l'Égypte antique, dédié au dieu Amon-Rê. Un labyrinthe de temples, obélisques et statues colossales.",
+    heroImgUrl: "https://d3rr2gvhjw0wwy.cloudfront.net/uploads/activity_headers/322261/2000x2000-0-70-5d4bc187993e524f5ff1856f294b27d0.jpg", // Temple de Karnak
+    location: "Louxor, Égypte",
+    period: "Moyen Empire - Époque ptolémaïque",
+    hieroglyph: "𓊪𓏏𓇯"
+  },
+  {
+    id: 5,
+    name: "Vallée des Rois",
+    description: "Nécropole royale où reposent les pharaons du Nouvel Empire. 63 tombes découvertes, dont celle de Toutânkhamon.",
+    heroImgUrl: "https://images.memphistours.com/large/1099771655_valley%20of%20the%20kings.jpg", // Vallée des Rois
+    location: "Louxor, Égypte",
+    period: "Nouvel Empire (1550-1077 av. J.-C.)",
+    hieroglyph: "𓇳𓏤𓊪𓏏"
+  },
+  {
+    id: 6,
+    name: "Temple d'Abou Simbel",
+    description: "Chef-d'œuvre de Ramsès II taillé dans la roche. Déplacé pierre par pierre pour éviter la submersion du lac Nasser.",
+    heroImgUrl: "https://static.nationalgeographic.fr/files/styles/image_3200/public/15-great-temple.jpg?w=1900&h=758", // Abou Simbel
+    location: "Assouan, Égypte",
+    period: "Nouvel Empire (XIXe dynastie)",
+    hieroglyph: "𓂋𓈖𓊪𓍯"
+  },
+  {
+    id: 7,
+    name: "Temple de Philae",
+    description: "Joyau de l'architecture ptolémaïque dédié à la déesse Isis. Sauvé des eaux et reconstruit sur l'île d'Aguilkia.",
+    heroImgUrl: "https://encrypted-tbn3.gstatic.com/licensed-image?q=tbn:ANd9GcRC0k9S6kZcXjQjyrnxmsDAKGQhu3EvSxxK_U2BwY363ifVFVMM6xOFWQO3yzH9dm_YVA77FEPUnxW34vS1FvZdB4QHxqc4DrfiQK4bxA", // Temple de Philae
+    location: "Assouan, Égypte",
+    period: "Époque ptolémaïque",
+    hieroglyph: "𓊨𓏏𓉐"
+  }
+];
 </file>
 
 <file path="src/providers/Providers.tsx">
@@ -13086,496 +12574,6 @@ export const Providers = ({ children }: Readonly<React.PropsWithChildren>) => {
     </SessionProvider>
   );
 };
-</file>
-
-<file path="src/services/GeminiGoogleService.ts">
-// src/services/GeminiGoogleService.ts
-import { Service } from './Service';
-
-export interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-export interface AIResponse {
-  message: string;
-  searchParams?: {
-    location: string;
-    types: string[];
-    query: string;
-    budget?: string;
-  };
-  recommendations?: {
-    hotel?: any;
-    restaurant?: any;
-    attraction?: any;
-    location?: string;
-  } | null;
-  dynamicTitles?: {
-    hotel?: string;
-    restaurant?: string;
-    attraction?: string;
-  } | null;
-}
-
-// Interface pour la vérification géographique
-interface LocationCheckResult {
-  isInEgypt: boolean;
-  coordinates?: { lat: number; lng: number };
-  correctedName?: string;
-}
-
-export class GeminiGoogleService {
-  private static readonly GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-  private static readonly GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
-  private static readonly GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
-  private static googleService = new Service("https://places.googleapis.com", "POST");
-  
-  // Cache pour éviter les appels répétés
-  private static locationCache = new Map<string, LocationCheckResult>();
-
-  private static readonly SYSTEM_PROMPT = `Tu es Anubis, guide touristique égyptien expert et chaleureux.
-
-PERSONNALITÉ :
-- Pour le message d'accueil : style égyptien complet avec "Ahlan wa sahlan", emojis 🏺🐪🏛️⚱️🌅👑
-- Pour les réponses suivantes : DIRECTES et CONCISES, max 2-3 phrases
-- Utilise occasionnellement des références égyptiennes mais reste PRATIQUE
-
-MISSION :
-- Aide à planifier des séjours en Égypte
-- Analyse les demandes pour extraire localisation, budget, types de lieux
-- Réponds de façon DIRECTE puis ajoute les paramètres de recherche
-- Accepte TOUTES les villes d'Égypte détectées dynamiquement
-
-STYLE DE RÉPONSE :
-- Si c'est le premier message : style égyptien complet
-- Sinon : réponse courte et efficace avec 1-2 emojis max
-- Si tu as des vraies recommandations Google Places, mentionne leurs vrais noms
-
-FORMAT DE RÉPONSE :
-[Message direct d'Anubis - MAX 2-3 phrases]
-
-[SEARCH_PARAMS]
-{
-  "location": "ville égyptienne",
-  "types": ["restaurant", "lodging", "tourist_attraction"],
-  "budget": "économique|moyen|luxe",
-  "query": "mots-clés pour Google Places Egypt"
-}
-
-[DYNAMIC_TITLES]
-{
-  "hotel": "titre personnalisé selon la demande",
-  "restaurant": "titre personnalisé selon la demande", 
-  "attraction": "titre personnalisé selon la demande"
-}
-
-EXEMPLE :
-User: "Je veux un restaurant de poisson à Alexandrie"
-Réponse: "Parfait ! Alexandrie offre d'excellents restaurants de fruits de mer 🐟"
-
-[SEARCH_PARAMS]
-{
-  "location": "Alexandrie",
-  "types": ["restaurant"],
-  "budget": "moyen", 
-  "query": "seafood restaurant Alexandria Egypt"
-}
-
-[DYNAMIC_TITLES]
-{
-  "restaurant": "🐟 Délices de la Méditerranée"
-}`;
-
-  static async sendMessage(messages: ChatMessage[]): Promise<AIResponse> {
-    try {
-      console.log('🔍 Test Gemini API Key:', this.GEMINI_API_KEY ? 'Présente ✅' : 'Manquante ❌');
-      
-      // Essayer d'abord une recherche directe
-      const lastMessage = messages[messages.length - 1]?.content || '';
-      const directResult = await this.tryDirectSearch(lastMessage);
-      
-      if (directResult) {
-        return directResult;
-      }
-      
-      const geminiResponse = await this.callGeminiAPI(messages);
-      
-      if (geminiResponse) {
-        console.log('✅ Réponse Gemini reçue:', geminiResponse.substring(0, 100) + '...');
-        const searchParams = this.parseSearchParams(geminiResponse);
-        const dynamicTitles = this.parseDynamicTitles(geminiResponse);
-        let recommendations = null;
-        
-        if (searchParams) {
-          recommendations = await this.searchWithGooglePlaces(searchParams);
-          
-          // Enrichir la réponse avec les vrais résultats
-          if (recommendations && this.hasValidRecommendations(recommendations)) {
-            const enrichedMessage = this.enrichMessageWithResults(
-              geminiResponse.replace(/\[SEARCH_PARAMS\][\s\S]*/, '').replace(/\[DYNAMIC_TITLES\][\s\S]*/, '').trim(),
-              recommendations,
-              lastMessage
-            );
-            
-            return {
-              message: enrichedMessage,
-              searchParams,
-              recommendations,
-              dynamicTitles
-            };
-          }
-        }
-
-        return {
-          message: geminiResponse.replace(/\[SEARCH_PARAMS\][\s\S]*/, '').replace(/\[DYNAMIC_TITLES\][\s\S]*/, '').trim(),
-          searchParams,
-          recommendations,
-          dynamicTitles
-        };
-      }
-      
-      return this.getFallbackResponse(lastMessage);
-      
-    } catch (error) {
-      console.error('❌ Erreur Gemini:', error);
-      return this.getFallbackResponse(messages[messages.length - 1]?.content || '');
-    }
-  }
-
-  // Essayer une recherche directe pour les demandes claires
-  private static async tryDirectSearch(userMessage: string): Promise<AIResponse | null> {
-    const message = userMessage.toLowerCase();
-    
-    if ((message.includes('hotel') || message.includes('resto') || message.includes('restaurant')) && 
-        (message.includes('trouve') || message.includes('adresse') || message.includes('exemple'))) {
-      
-      console.log('🎯 Recherche directe détectée');
-      
-      // Chercher une ville égyptienne dans le message
-      const words = message.split(' ');
-      for (const word of words) {
-        if (word.length > 3) {
-          try {
-            const locationCheck = await this.isLocationInEgypt(word);
-            if (locationCheck.isInEgypt) {
-              const location = locationCheck.correctedName || word;
-              
-              let types = [];
-              if (message.includes('hotel')) types.push('lodging');
-              if (message.includes('resto') || message.includes('restaurant')) types.push('restaurant');
-              if (!types.length) types = ['restaurant', 'lodging'];
-              
-              const searchParams = {
-                location,
-                types,
-                query: `${types.join(' ')} ${location} Egypt`,
-                budget: 'moyen'
-              };
-              
-              const recommendations = await this.searchWithGooglePlaces(searchParams);
-              
-              if (recommendations && this.hasValidRecommendations(recommendations)) {
-                const directMessage = this.generateDirectResponse(recommendations, message, location);
-                
-                return {
-                  message: directMessage,
-                  searchParams,
-                  recommendations,
-                  dynamicTitles: {
-                    hotel: "🏨 Hôtel trouvé",
-                    restaurant: "🍽️ Restaurant trouvé",
-                    attraction: "🏛️ Attraction trouvée"
-                  }
-                };
-              }
-              break;
-            }
-          } catch (error) {
-            continue;
-          }
-        }
-      }
-    }
-    
-    return null;
-  }
-
-  private static generateDirectResponse(recommendations: any, message: string, location: string): string {
-    let response = `🏺 Parfait ! Voici ce que j'ai trouvé à ${location} :\n\n`;
-    
-    if (message.includes('hotel') && recommendations.hotel?.displayName?.text) {
-      const hotel = recommendations.hotel;
-      const address = hotel.formattedAddress?.split(',')[0] || 'Adresse non disponible';
-      response += `🏨 **${hotel.displayName.text}**\n📍 ${address}\n`;
-      if (hotel.rating) response += `⭐ ${hotel.rating}\n`;
-      response += '\n';
-    }
-    
-    if ((message.includes('resto') || message.includes('restaurant')) && recommendations.restaurant?.displayName?.text) {
-      const restaurant = recommendations.restaurant;
-      const address = restaurant.formattedAddress?.split(',')[0] || 'Adresse non disponible';
-      response += `🍽️ **${restaurant.displayName.text}**\n📍 ${address}\n`;
-      if (restaurant.rating) response += `⭐ ${restaurant.rating}\n`;
-    }
-    
-    return response.trim();
-  }
-
-  // Vérifier si on a des recommandations valides
-  private static hasValidRecommendations(recommendations: any): boolean {
-    return recommendations && (
-      (recommendations.hotel?.displayName?.text) ||
-      (recommendations.restaurant?.displayName?.text) ||
-      (recommendations.attraction?.displayName?.text)
-    );
-  }
-
-  // Enrichir le message avec les vrais résultats
-  private static enrichMessageWithResults(originalMessage: string, recommendations: any, userMessage: string): string {
-    const message = userMessage.toLowerCase();
-    
-    if (message.includes('adresse') || message.includes('trouve') || message.includes('exemple')) {
-      return this.generateDirectResponse(recommendations, message, recommendations.location);
-    }
-    
-    // Enrichir le message original avec des noms réels
-    let enriched = originalMessage;
-    
-    if (recommendations.hotel?.displayName?.text) {
-      enriched += ` Je recommande ${recommendations.hotel.displayName.text} pour l'hébergement.`;
-    }
-    
-    if (recommendations.restaurant?.displayName?.text) {
-      enriched += ` Pour la restauration, ${recommendations.restaurant.displayName.text} est excellent.`;
-    }
-    
-    return enriched;
-  }
-
-  // Vérification dynamique des lieux égyptiens
-  private static async isLocationInEgypt(locationName: string): Promise<LocationCheckResult> {
-    const cacheKey = locationName.toLowerCase();
-    if (this.locationCache.has(cacheKey)) {
-      return this.locationCache.get(cacheKey)!;
-    }
-
-    try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(locationName + ', Egypt')}&key=${this.GOOGLE_API_KEY}`
-      );
-      
-      if (!response.ok) {
-        const result = { isInEgypt: false };
-        this.locationCache.set(cacheKey, result);
-        return result;
-      }
-      
-      const data = await response.json();
-      
-      if (data.results && data.results.length > 0) {
-        const result = data.results[0];
-        
-        const isEgyptian = result.address_components?.some((component: any) => 
-          component.types.includes('country') && 
-          (component.short_name === 'EG' || component.long_name === 'Egypt')
-        ) || 
-        result.formatted_address.toLowerCase().includes('egypt') ||
-        result.formatted_address.toLowerCase().includes('égypte');
-        
-        if (isEgyptian) {
-          const locationResult = {
-            isInEgypt: true,
-            coordinates: {
-              lat: result.geometry.location.lat,
-              lng: result.geometry.location.lng
-            },
-            correctedName: result.formatted_address.split(',')[0].trim()
-          };
-          this.locationCache.set(cacheKey, locationResult);
-          return locationResult;
-        }
-      }
-      
-      const result = { isInEgypt: false };
-      this.locationCache.set(cacheKey, result);
-      return result;
-    } catch (error) {
-      console.error('Erreur géocodage:', error);
-      const result = { isInEgypt: false };
-      this.locationCache.set(cacheKey, result);
-      return result;
-    }
-  }
-
-  private static async callGeminiAPI(messages: ChatMessage[]): Promise<string | null> {
-    try {
-      const conversation = messages.map(m => `${m.role}: ${m.content}`).join('\n');
-      const fullPrompt = `${this.SYSTEM_PROMPT}\n\nConversation:\n${conversation}\n\nAnubis:`;
-
-      const response = await fetch(`${this.GEMINI_API_URL}?key=${this.GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: fullPrompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.8,
-            maxOutputTokens: 600
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Gemini Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-      
-    } catch (error) {
-      console.warn('Gemini non disponible:', error);
-      return null;
-    }
-  }
-
-  private static parseSearchParams(geminiResponse: string): any {
-    try {
-      const match = geminiResponse.match(/\[SEARCH_PARAMS\]\s*(\{[\s\S]*?\})/);
-      if (match) {
-        return JSON.parse(match[1]);
-      }
-    } catch (error) {
-      console.error('Erreur parsing search params:', error);
-    }
-    return null;
-  }
-
-  private static parseDynamicTitles(geminiResponse: string): any {
-    try {
-      const match = geminiResponse.match(/\[DYNAMIC_TITLES\]\s*(\{[\s\S]*?\})/);
-      if (match) {
-        return JSON.parse(match[1]);
-      }
-    } catch (error) {
-      console.error('Erreur parsing dynamic titles:', error);
-    }
-    return null;
-  }
-
-  private static async searchWithGooglePlaces(searchParams: any): Promise<any | null> {
-    try {
-      const location = searchParams.location || 'Le Caire';
-      
-      // Vérification dynamique
-      const locationCheck = await this.isLocationInEgypt(location);
-      
-      if (!locationCheck.isInEgypt) {
-        console.warn(`Lieu "${location}" non trouvé en Égypte`);
-        // Essayer avec les coordonnées par défaut
-      }
-      
-      const coords = locationCheck.coordinates || { lat: 30.0444, lng: 31.2357 };
-      const correctedLocation = locationCheck.correctedName || location;
-
-      console.log(`🔍 Recherche pour ${correctedLocation}:`, coords);
-
-      const results = await this.googleService.searchNearby({
-        locationRestriction: {
-          circle: {
-            center: { latitude: coords.lat, longitude: coords.lng },
-            radius: 50000
-          }
-        },
-        includedTypes: searchParams.types || ["restaurant", "lodging", "tourist_attraction"],
-        maxResultCount: 20,
-        languageCode: "fr",
-      });
-
-      console.log(`📊 Résultats trouvés:`, results.places?.length || 0);
-
-      if (results.places && results.places.length > 0) {
-        const organized = this.organizeResultsByType(results.places);
-        
-        console.log(`📊 Organisés:`, {
-          hotels: organized.hotels.length,
-          restaurants: organized.restaurants.length,
-          attractions: organized.attractions.length
-        });
-        
-        return {
-          location: correctedLocation,
-          hotel: organized.hotels[0] || null,
-          restaurant: organized.restaurants[0] || null, 
-          attraction: organized.attractions[0] || null,
-          allResults: organized
-        };
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Erreur Google Places:', error);
-      return null;
-    }
-  }
-
-  private static organizeResultsByType(places: any[]): any {
-    const hotels = places.filter(place => 
-      place.types?.some((type: string) => ['lodging', 'hotel', 'motel', 'resort'].includes(type))
-    );
-    
-    const restaurants = places.filter(place =>
-      place.types?.some((type: string) => ['restaurant', 'food', 'meal_takeaway', 'cafe'].includes(type))
-    );
-    
-    const attractions = places.filter(place =>
-      place.types?.some((type: string) => ['tourist_attraction', 'museum', 'park', 'zoo'].includes(type))
-    );
-
-    return { hotels, restaurants, attractions };
-  }
-
-  private static getFallbackResponse(userMessage: string): AIResponse {
-    const message = userMessage.toLowerCase();
-    
-    let location = 'Le Caire';
-    let types = ['restaurant', 'lodging', 'tourist_attraction'];
-    let budget = 'moyen';
-    
-    if (message.includes('alexandria') || message.includes('alexandrie')) location = 'Alexandrie';
-    else if (message.includes('luxor') || message.includes('louxor')) location = 'Luxor';
-    else if (message.includes('aswan') || message.includes('assouan')) location = 'Assouan';
-    else if (message.includes('port') && message.includes('said')) location = 'Port Said';
-    
-    if (message.includes('restaurant') || message.includes('manger')) types = ['restaurant'];
-    else if (message.includes('hotel') || message.includes('dormir')) types = ['lodging'];
-    else if (message.includes('visiter') || message.includes('attraction')) types = ['tourist_attraction'];
-    
-    if (message.includes('pas cher') || message.includes('budget')) budget = 'économique';
-    else if (message.includes('luxe') || message.includes('cher')) budget = 'luxe';
-
-    const shortResponses = [
-      `Parfait ! Voici mes recommandations pour ${location} 🏺`,
-      `Excellent choix ! ${location} vous attend 🐪`,
-      `Trouvé ! Les meilleures options à ${location} 👑`
-    ];
-
-    return {
-      message: shortResponses[Math.floor(Math.random() * shortResponses.length)],
-      searchParams: { location, types, query: `${types.join(' ')} ${location} Egypt`, budget },
-      recommendations: null,
-      dynamicTitles: {
-        hotel: "🏨 Hébergement recommandé",
-        restaurant: "🍽️ Restaurant recommandé",
-        attraction: "🏺 Attraction recommandée"
-      }
-    };
-  }
-}
 </file>
 
 <file path="src/services/PlacesImageService.ts">
@@ -13680,6 +12678,806 @@ export class PlacesImageService {
 }
 </file>
 
+<file path="src/services/ServiceInterface.ts">
+// src/services/ServiceInterface.ts - Version complète
+export interface PlaceResult {
+  types?: string[];
+  id: string;
+  displayName: {
+    text: string;
+    languageCode: string;
+  };
+  formattedAddress: string;
+  internationalPhoneNumber?: string;
+  currentOpeningHours?: {
+    openNow: boolean;
+    periods: Array<{
+      open: {
+        date: { year: number; month: number; day: number };
+        day: number;
+        hour: number;
+        minute: number;
+      };
+      close: {
+        date: { year: number; month: number; day: number };
+        day: number;
+        hour: number;
+        minute: number;
+      };
+    }>;
+    weekdayDescriptions: Array<string>;
+  };
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  rating?: number;
+  photos?: Array<{
+    name: string;
+    authorAttributions: Array<{
+      displayName: string;
+      photoUri: string;
+      uri: string;
+    }>;
+  }>;
+}
+
+// Interface pour la recherche par proximité
+export interface SearchNearbyParams {
+  locationRestriction: {
+    circle: {
+      center: { latitude: number; longitude: number };
+      radius: number;
+    };
+  };
+  includedTypes: string[];
+  maxResultCount: number;
+  languageCode: string;
+}
+
+// Interface pour la recherche par texte
+export interface SearchTextParams {
+  textQuery: string;
+  languageCode: string;
+  maxResultCount: number;
+}
+
+// Réponse de l'API Google Places
+export interface GooglePlacesResponse {
+  places: PlaceResult[];
+}
+
+export interface ServiceInterface {
+  searchByText(params: {
+    query: string;
+    type: string;
+    name?: string;
+  }): Promise<PlaceResult[]>;
+  
+  searchRestaurants(params: { 
+    name?: string;
+  }): Promise<PlaceResult[]>;
+  
+  searchHotels(params: { 
+    name?: string;
+  }): Promise<PlaceResult[]>;
+  
+  searchRestaurantsAndHotels(params: { 
+    name?: string;
+  }): Promise<PlaceResult[]>;
+  
+  searchById(params: { 
+    placeId: string;
+  }): Promise<PlaceResult>;
+
+  // Nouvelles méthodes pour la carte
+  searchNearby(params: SearchNearbyParams): Promise<GooglePlacesResponse>;
+  
+  searchText(params: SearchTextParams): Promise<GooglePlacesResponse>;
+}
+</file>
+
+<file path=".env.example">
+# MongoDB pour Prisma
+DATABASE_URL="mongodb+srv:connexion"
+
+# Obligatoire pour NextAuth (utilisé pour signer les tokens internes)
+NEXTAUTH_SECRET="api_key"
+
+# Utilisé si tu signes tes propres JWT en plus (facultatif si tu n’utilises que NextAuth)
+JWT_SECRET="api_key"
+
+# Utilisé côté server & Vercel pour rediriger les callbacks OAuth, emails, etc.
+NEXTAUTH_URL="http://localhost:3000"
+
+RESEND_API_KEY=re_api_key
+
+FROM_EMAIL="onboarding@resend.dev"
+
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY="api_key"
+
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=ta_cle_google_maps
+
+NEXT_PUBLIC_GEMINI_API_KEY=sk-ant-api03-ton-api-key-claude
+</file>
+
+<file path="src/components/home/VisitHistory.tsx">
+// src/components/home/VisitHistory.tsx - VERSION SANS AUTO-REFRESH
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
+interface Visit {
+  id: string;
+  placeId: string;
+  placeName: string;
+  visitedAt: string;
+}
+
+export function VisitHistory() {
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const fetchVisits = async () => {
+    if (!session?.user) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/visits');
+      const data = await response.json();
+      setVisits(data.visits || []);
+    } catch (err) {
+      console.error('Erreur chargement historique:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🎯 CHANGEMENT : Charger seulement au montage du composant
+  useEffect(() => {
+    fetchVisits();
+  }, [session]);
+
+  // 🎯 SUPPRIMÉ : L'interval qui rechargeait toutes les 5 secondes
+  // useEffect(() => {
+  //   if (session?.user) {
+  //     const interval = setInterval(fetchVisits, 5000);
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [session]);
+
+  if (!session?.user || loading) {
+    return null;
+  }
+
+  if (visits.length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+          🕐 Vos dernières visites
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+          Aucune visite récente. Cliquez sur un lieu pour commencer !
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          🕐 Vos dernières visites ({visits.length})
+        </h3>
+      </div>
+      <div className="space-y-2">
+        {visits.map((visit) => (
+          <div
+            key={visit.id}
+            onClick={() => router.push(`/places/${visit.placeId}`)}
+            className="p-3 bg-gray-50 dark:bg-gray-700 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            <div className="font-medium text-gray-900 dark:text-white">
+              {visit.placeName}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {new Date(visit.visitedAt).toLocaleDateString('fr-FR', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/components/Login.tsx">
+"use client";
+import { Input } from "@/components/ui/input";
+import { usePathname } from "next/navigation";
+import { ContainerForm } from "./form/ContainerForm";
+import { Title } from "@/components/ui/title";
+import { AuthLink } from "./form/Redirection";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { LoginPayload, loginSchema } from "@/validators/loginSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { SubmitButton } from "./form/SubmitButton";
+import { useUserQuery } from "@/hooks/useUserQuery";
+import { EgyptianCarousel } from "./EgyptianCarousel";
+type Props = {
+  className?: string;
+  callbackUrl?: string;
+};
+
+export const Login = ({ className, callbackUrl }: Props) => {
+  const pathname = usePathname();
+  const isRegisterPage = pathname === "/register";
+  const { loginUser } = useUserQuery();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginPayload>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const save: SubmitHandler<LoginPayload> = async (data) =>
+    await loginUser({
+      data,
+      reset,
+      callbackUrl,
+    });
+
+  return (
+    <div className="flex h-screen flex-col items-center justify-center lg:flex-row">
+      <EgyptianCarousel className="w-4/6 text-white" />
+      <ContainerForm handleSubmit={handleSubmit(save)} className="flex-1">
+        <Title
+          tag="h2"
+          className="w-full text-start text-2xl font-semibold tracking-tight"
+        >
+          Connectez-vous
+        </Title>
+
+        <Input
+          className="h-12 w-full"
+          placeholder="Entrez votre email"
+          type="email"
+          aria-label="Adresse e-mail"
+          error={errors.email?.message}
+          {...register("email")}
+        />
+        <Input
+          className="h-12 w-full"
+          placeholder="Entrez votre mot de passe"
+          type="password"
+          aria-label="Mot de passe"
+          error={errors.password?.message}
+          {...register("password")}
+        />
+
+        <div className="flex items-center w-full justify-between">
+          <AuthLink isRegisterPage={isRegisterPage} />
+          <SubmitButton
+            label={isSubmitting ? "Chargement..." : "Se connecter"}
+            disabled={isSubmitting}
+          />
+        </div>
+      </ContainerForm>
+    </div>
+  );
+};
+</file>
+
+<file path="src/components/TravelChatbot.tsx">
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageCircle, X, Send, Sparkles } from 'lucide-react';
+import { GeminiGoogleService, ChatMessage } from '@/services/GeminiGoogleService';
+
+interface Message {
+  id: string;
+  type: 'user' | 'bot';
+  content: string;
+  timestamp: Date;
+}
+
+interface ChatbotProps {
+  onRecommendation?: (recommendations: any) => void;
+  onPlaceClick?: (placeId: string, placeType: 'hotel' | 'restaurant' | 'attraction') => void;
+  onSearchUpdate?: (searchTerm: string) => void; // Nouveau prop pour synchroniser avec la barre de recherche
+}
+
+const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick, onSearchUpdate }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      type: 'bot',
+      content: "🐪 Ahlan wa sahlan ! Je suis Anubis, votre guide personnel pour l'Égypte ! Je connais tous les secrets de mes terres : des pyramides de Gizeh aux temples de Louxor, des restaurants cachés du Caire aux hôtels de rêve d'Assouan. Que puis-je vous faire découvrir aujourd'hui ? 🏺✨",
+      timestamp: new Date()
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Lieux égyptiens populaires pour l'extraction
+  const egyptianPlaces = [
+    'le caire', 'cairo', 'caire',
+    'alexandrie', 'alexandria', 
+    'luxor', 'louxor',
+    'assouan', 'aswan',
+    'memphis', 'gizeh', 'giza',
+    'sharm el sheikh', 'sharm',
+    'hurghada',
+    'saqqara', 'karnak'
+  ];
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Fonction pour extraire les termes de recherche pertinents
+  const extractSearchTerms = (userMessage: string, botMessage: string): string | null => {
+    const fullText = `${userMessage} ${botMessage}`.toLowerCase();
+    
+    // 1. Chercher des villes égyptiennes mentionnées
+    for (const place of egyptianPlaces) {
+      if (fullText.includes(place)) {
+        console.log('🎯 Ville détectée:', place);
+        return place.charAt(0).toUpperCase() + place.slice(1);
+      }
+    }
+    
+    // 2. Chercher des noms d'établissements spécifiques dans la réponse du bot
+    const establishmentPattern = /\*\*(.*?)\*\*/g;
+    const matches = botMessage.match(establishmentPattern);
+    if (matches && matches.length > 0) {
+      // Prendre le premier établissement mentionné
+      const establishment = matches[0].replace(/\*\*/g, '');
+      console.log('🏨 Établissement détecté:', establishment);
+      return establishment;
+    }
+    
+    // 3. Extraire des mots-clés génériques pour la recherche
+    const keywords = ['hotel', 'restaurant', 'attraction', 'pyramide', 'temple'];
+    for (const keyword of keywords) {
+      if (fullText.includes(keyword)) {
+        // Combiner avec une ville si possible
+        for (const place of egyptianPlaces) {
+          if (fullText.includes(place)) {
+            console.log('🔍 Combinaison détectée:', `${keyword} ${place}`);
+            return `${keyword} ${place}`;
+          }
+        }
+        console.log('🔍 Mot-clé détecté:', keyword);
+        return keyword;
+      }
+    }
+    
+    return null;
+  };
+
+  // Fonction pour vérifier si la demande concerne l'Égypte - Version minimaliste
+  const isEgyptRelated = (message: string): boolean => {
+    const basicEgyptKeywords = [
+      'egypt', 'égypte', 'pyramide', 'pharaon', 'nil', 'caire', 'alexandrie', 'luxor', 'assouan'
+    ];
+    
+    // Accepter les messages qui contiennent des mots-clés de base OU sont assez longs pour contenir des noms de lieux
+    return basicEgyptKeywords.some(keyword => 
+      message.toLowerCase().includes(keyword)
+    ) || message.length > 15; // Donner une chance aux messages longs d'être analysés
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
+
+    // Vérification préalable si la demande concerne l'Égypte
+    if (!isEgyptRelated(inputMessage)) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: inputMessage,
+        timestamp: new Date()
+      };
+
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: "🏺 Pardonnez-moi, je ne guide qu'en terre d'Égypte ! Puis-je vous aider à découvrir nos merveilles ? Essayez de me parler du Caire, d'Alexandrie, de Luxor ou de nos sites légendaires ! 🐪",
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, userMessage, botResponse]);
+      setInputMessage('');
+      return;
+    }
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: inputMessage,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    
+    const newConversationHistory = [
+      ...conversationHistory,
+      { role: 'user' as const, content: inputMessage }
+    ];
+    setConversationHistory(newConversationHistory);
+    
+    // Sauvegarder le message utilisateur pour l'extraction
+    const currentUserMessage = inputMessage;
+    setInputMessage('');
+    setIsTyping(true);
+
+    try {
+      // Appel simplifié à Gemini qui fait tout le travail
+      const aiResponse = await GeminiGoogleService.sendMessage(newConversationHistory);
+      
+      console.log('🤖 Réponse GeminiService:', {
+        message: aiResponse.message?.substring(0, 100) + '...',
+        hasMessage: !!aiResponse.message
+      });
+      
+      setConversationHistory([
+        ...newConversationHistory,
+        { role: 'assistant' as const, content: aiResponse.message }
+      ]);
+
+      // Extraire les termes de recherche du message utilisateur et de la réponse bot
+      const searchTerm = extractSearchTerms(currentUserMessage, aiResponse.message);
+      
+      if (searchTerm && onSearchUpdate) {
+        console.log('🎯 Mise à jour de la recherche avec:', searchTerm);
+        // Petite pause pour que l'utilisateur voie la réponse du bot avant la recherche
+        setTimeout(() => {
+          onSearchUpdate(searchTerm);
+        }, 1500);
+      }
+
+      // Gemini fait tout maintenant, on affiche directement sa réponse
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: aiResponse.message,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, botResponse]);
+
+      // Appeler le callback de recommandation si fourni
+      if (onRecommendation && aiResponse.recommendations) {
+        onRecommendation(aiResponse.recommendations);
+      }
+
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du message:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: "🏺 Pardonnez-moi, les vents du désert perturbent ma connexion ! Pouvez-vous répéter ?",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      {/* Bouton flottant avec pyramide */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="bg-black hover:bg-gray-900 text-yellow-400 rounded-full p-4 shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-yellow-600 relative"
+        >
+          <svg 
+            className="h-7 w-7" 
+            viewBox="0 0 24 24" 
+            fill="currentColor"
+          >
+            <path d="M12 2L2 22h20L12 2zm0 3.84L19.16 20H4.84L12 5.84z"/>
+            <path d="M12 5.84L16.58 18H7.42L12 5.84z" opacity="0.7"/>
+          </svg>
+          {/* Badge indiquant la synchronisation */}
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+        </button>
+      )}
+
+      {/* Interface de chat */}
+      {isOpen && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-96 h-[600px] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {/* En-tête */}
+          <div className="bg-gradient-to-r from-yellow-600 via-yellow-700 to-amber-800 text-white p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-black/30 rounded-full flex items-center justify-center border border-yellow-400">
+                <svg className="h-6 w-6 text-yellow-300" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 22h20L12 2zm0 3.84L19.16 20H4.84L12 5.84z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold">Anubis - Guide Égyptien</h3>
+                <p className="text-sm text-yellow-100 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Connecté à la recherche principale
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`max-w-[85%] ${
+                  message.type === 'user'
+                    ? 'bg-yellow-600 text-white rounded-2xl rounded-br-md'
+                    : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md shadow-md border-l-4 border-yellow-600'
+                } px-4 py-3`}>
+                  <div className="text-sm leading-relaxed whitespace-pre-line">
+                    {message.content}
+                  </div>
+                  
+                  <p className="text-xs opacity-70 mt-2">
+                    {message.timestamp.toLocaleTimeString('fr-FR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </p>
+                </div>
+              </div>
+            ))}
+
+            {/* Indicateur de frappe */}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-white dark:bg-gray-700 rounded-2xl rounded-bl-md shadow-md px-4 py-3 border-l-4 border-yellow-600">
+                  <div className="flex space-x-1 items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-300 mr-2">Anubis analyse...</span>
+                    <div className="w-2 h-2 bg-yellow-600 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-yellow-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-yellow-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Zone de saisie */}
+          <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex gap-2">
+              <textarea
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Demandez-moi des recommandations... 🐪"
+                className="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-500 focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                rows={2}
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={!inputMessage.trim() || isTyping}
+                className="self-end bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-400 text-white rounded-lg p-2 transition-colors"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+            {/* Indication de synchronisation */}
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 text-center flex items-center justify-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              Mes recommandations alimentent la recherche automatiquement
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TravelChatbot;
+</file>
+
+<file path="src/services/GeminiGoogleService.ts">
+// src/services/GeminiGoogleService.ts
+import { Service } from './Service';
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AIResponse {
+  message: string;
+  searchParams?: {
+    location: string;
+    types: string[];
+    query: string;
+    budget?: string;
+  };
+  recommendations?: {
+    hotel?: any;
+    restaurant?: any;
+    attraction?: any;
+    location?: string;
+  } | null;
+  dynamicTitles?: {
+    hotel?: string;
+    restaurant?: string;
+    attraction?: string;
+  } | null;
+}
+
+export class GeminiGoogleService {
+  private static readonly GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  private static readonly GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
+  private static readonly SYSTEM_PROMPT = `Tu es Anubis, guide touristique égyptien expert et passionné.
+
+MISSION :
+- Tu utilises tes connaissances approfondies de l'Égypte pour recommander des lieux réels et populaires
+- Tu donnes des noms d'établissements, d'hôtels, de restaurants que tu connais en Égypte
+- Tu fournis des adresses approximatives quand tu les connais
+- Tu adaptes tes recommandations selon le budget et les préférences
+
+STYLE :
+- Chaleureux et personnel avec un accent égyptien
+- Utilise des emojis égyptiens : 🏺🐪🏛️⚱️🌅👑🍽️🏨
+- Donne des recommandations concrètes avec des noms réels
+
+EXEMPLE DE RÉPONSE IDÉALE :
+User: "je veux un hotel et un resto à memphis"
+Anubis: "🏺 Memphis, terre des pharaons ! Voici mes recommandations :
+
+🏨 **Pour l'hébergement :**
+📍 **Memphis Guest House** - Une belle maison d'hôtes traditionnelle près des ruines
+🏠 Route de Saqqara, Memphis
+⭐ Très apprécié des voyageurs
+
+🍽️ **Pour la restauration :**
+📍 **Café El Saqqara** - Cuisine locale authentique avec vue sur les pyramides
+🏠 Route des Pyramides, près de Memphis
+🍴 Spécialités : koshari, ful medames, thé à la menthe
+
+Memphis est parfait pour découvrir l'Égypte ancienne ! 🐪"
+
+RÈGLES :
+- Donne TOUJOURS des noms d'établissements concrets
+- Ajoute des adresses approximatives si tu les connais
+- Varie tes recommandations selon la ville demandée
+- Si tu ne connais pas bien une ville, recommande des types d'établissements avec des noms génériques mais réalistes
+- Adapte le budget : économique, moyen, luxe
+- Donne 1-2 recommandations par catégorie demandée (hôtel, restaurant, attraction)
+
+VILLES PRINCIPALES D'ÉGYPTE que tu connais bien :
+- Le Caire : Hôtels comme Kempinski, Marriott, Four Seasons / Restaurants comme Abou Tarek, Sequoia
+- Alexandrie : Hotels comme Four Seasons, Hilton / Restaurants comme Fish Market, Tikka
+- Luxor : Hôtels comme Winter Palace, Sofitel / Restaurants comme 1886 Restaurant
+- Assouan : Hôtels comme Old Cataract, Movenpick / Restaurants comme Nubian Restaurant
+- Memphis : Sites historiques avec petites maisons d'hôtes locales
+- Sharm El Sheikh : Resorts comme Four Seasons, Movenpick
+
+Tu peux inventer des noms réalistes si tu ne te souviens pas exactement, l'important est de donner des recommandations concrètes et utiles !`;
+
+  static async sendMessage(messages: ChatMessage[]): Promise<AIResponse> {
+    try {
+      console.log('🔍 Envoi à Gemini API (mode recommandations directes)...');
+      
+      // Appel direct à Gemini pour des recommandations complètes
+      const geminiResponse = await this.callGeminiAPI(messages);
+      
+      if (geminiResponse) {
+        console.log('✅ Réponse Gemini avec recommandations:', geminiResponse);
+
+        return {
+          message: geminiResponse,
+          searchParams: undefined, // Plus besoin de paramètres de recherche
+          recommendations: null, // Plus besoin d'API externe
+          dynamicTitles: null
+        };
+      }
+      
+      // Fallback si Gemini ne répond pas
+      return {
+        message: "🏺 Les vents du désert perturbent ma connexion ! Pouvez-vous répéter votre demande ?",
+        searchParams: undefined,
+        recommendations: null
+      };
+      
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      return {
+        message: "🏺 Pardonnez-moi, les vents du désert perturbent ma connexion ! Pouvez-vous répéter ?",
+        searchParams: undefined,
+        recommendations: null
+      };
+    }
+  }
+
+  private static async callGeminiAPI(messages: ChatMessage[]): Promise<string | null> {
+    try {
+      const conversation = messages.map(m => `${m.role}: ${m.content}`).join('\n');
+      const fullPrompt = `${this.SYSTEM_PROMPT}\n\nConversation:\n${conversation}\n\nAnubis:`;
+
+      console.log('📤 Prompt envoyé à Gemini:', fullPrompt.substring(0, 200) + '...');
+
+      const response = await fetch(`${this.GEMINI_API_URL}?key=${this.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: fullPrompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.9,
+            maxOutputTokens: 1000 // Plus de tokens pour des recommandations détaillées
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erreur Gemini HTTP:', response.status, errorText);
+        throw new Error(`Gemini Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      
+      console.log('📥 Réponse Gemini reçue:', geminiText?.substring(0, 200) + '...');
+      
+      return geminiText;
+      
+    } catch (error) {
+      console.error('❌ Erreur Gemini API:', error);
+      throw error;
+    }
+  }
+}
+</file>
+
 <file path="src/services/Service.ts">
 // src/services/Service.ts - Version complète avec nouvelles méthodes
 import { 
@@ -13695,7 +13493,7 @@ type Method = "GET" | "POST" | "PUT" | "DELETE";
 export class Service implements ServiceInterface {
   apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "";
 
-  private maxResults = 1; // ← Change à 40 pour la présentation
+  private maxResults = 1;// ← Change à 40 pour la présentation
 
   constructor(public baseUrl: string, public method: Method) {
     this.baseUrl = baseUrl;
@@ -13941,134 +13739,84 @@ export class Service implements ServiceInterface {
     const result = await response.json();
     return result;
   }
-}
-</file>
 
-<file path="src/services/ServiceInterface.ts">
-// src/services/ServiceInterface.ts - Version complète
-export interface PlaceResult {
-  types?: string[];
-  id: string;
-  displayName: {
-    text: string;
-    languageCode: string;
-  };
-  formattedAddress: string;
-  internationalPhoneNumber?: string;
-  currentOpeningHours?: {
-    openNow: boolean;
-    periods: Array<{
-      open: {
-        date: { year: number; month: number; day: number };
-        day: number;
-        hour: number;
-        minute: number;
-      };
-      close: {
-        date: { year: number; month: number; day: number };
-        day: number;
-        hour: number;
-        minute: number;
-      };
-    }>;
-    weekdayDescriptions: Array<string>;
-  };
-  location?: {
-    latitude: number;
-    longitude: number;
-  };
-  rating?: number;
-  photos?: Array<{
-    name: string;
-    authorAttributions: Array<{
-      displayName: string;
-      photoUri: string;
-      uri: string;
-    }>;
-  }>;
-}
 
-// Interface pour la recherche par proximité
-export interface SearchNearbyParams {
-  locationRestriction: {
-    circle: {
-      center: { latitude: number; longitude: number };
-      radius: number;
+
+// REMPLACER ta méthode autocomplete par celle-ci (NOUVELLE API CORRIGÉE) :
+
+async autocomplete(params: {
+  input: string;
+  locationBias?: any; // On garde pour compatibilité
+  includedTypes?: string[];
+  languageCode?: string;
+  maxResultCount?: number; // On garde pour compatibilité
+}) {
+  try {
+    // 🎯 Construire le body selon la nouvelle API
+    const requestBody = {
+      input: params.input,
+      // 👈 CHANGEMENT : includedPrimaryTypes au lieu de includedTypes
+      ...(params.includedTypes && params.includedTypes.length > 0 && {
+        includedPrimaryTypes: params.includedTypes
+      }),
+      // 👈 CHANGEMENT : includedRegionCodes pour limiter à l'Égypte
+      includedRegionCodes: ["eg"],
+      // 👈 CHANGEMENT : languageCode
+      ...(params.languageCode && { languageCode: params.languageCode }),
+      // 👈 NOUVEAU : sessionToken pour optimiser les coûts
+      sessionToken: crypto.randomUUID(),
+      // 👈 NOUVEAU : locationRestriction avec un rectangle de l'Égypte
+      locationRestriction: {
+        rectangle: {
+          low: { latitude: 22.0, longitude: 24.7 },  // Sud-Ouest de l'Égypte
+          high: { latitude: 31.7, longitude: 36.9 }   // Nord-Est de l'Égypte
+        }
+      }
     };
-  };
-  includedTypes: string[];
-  maxResultCount: number;
-  languageCode: string;
+
+    console.log('🔍 Requête autocomplétion (NOUVELLE API CORRIGÉE):', requestBody);
+
+    const requestHeaders = new Headers();
+    requestHeaders.set("Content-Type", "application/json");
+    requestHeaders.set("X-Goog-Api-Key", this.apiKey);
+    // 👈 CHANGEMENT : FieldMask simplifié selon ta doc
+    requestHeaders.set(
+      "X-Goog-FieldMask", 
+      "suggestions.placePrediction.text,suggestions.placePrediction.placeId"
+    );
+
+    const response = await fetch(
+      `${this.baseUrl}/v1/places:autocomplete`,
+      {
+        method: "POST",
+        headers: requestHeaders,
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Détails erreur:', errorText);
+      throw new Error(`Erreur API autocomplétion: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Résultats autocomplétion (nouvelle API):', data);
+    
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur autocomplétion:', error);
+    throw error;
+  }
 }
 
-// Interface pour la recherche par texte
-export interface SearchTextParams {
-  textQuery: string;
-  languageCode: string;
-  maxResultCount: number;
+
+
 }
-
-// Réponse de l'API Google Places
-export interface GooglePlacesResponse {
-  places: PlaceResult[];
-}
-
-export interface ServiceInterface {
-  searchByText(params: {
-    query: string;
-    type: string;
-    name?: string;
-  }): Promise<PlaceResult[]>;
-  
-  searchRestaurants(params: { 
-    name?: string;
-  }): Promise<PlaceResult[]>;
-  
-  searchHotels(params: { 
-    name?: string;
-  }): Promise<PlaceResult[]>;
-  
-  searchRestaurantsAndHotels(params: { 
-    name?: string;
-  }): Promise<PlaceResult[]>;
-  
-  searchById(params: { 
-    placeId: string;
-  }): Promise<PlaceResult>;
-
-  // Nouvelles méthodes pour la carte
-  searchNearby(params: SearchNearbyParams): Promise<GooglePlacesResponse>;
-  
-  searchText(params: SearchTextParams): Promise<GooglePlacesResponse>;
-}
-</file>
-
-<file path=".env.example">
-# MongoDB pour Prisma
-DATABASE_URL="mongodb+srv:connexion"
-
-# Obligatoire pour NextAuth (utilisé pour signer les tokens internes)
-NEXTAUTH_SECRET="api_key"
-
-# Utilisé si tu signes tes propres JWT en plus (facultatif si tu n’utilises que NextAuth)
-JWT_SECRET="api_key"
-
-# Utilisé côté server & Vercel pour rediriger les callbacks OAuth, emails, etc.
-NEXTAUTH_URL="http://localhost:3000"
-
-RESEND_API_KEY=re_api_key
-
-FROM_EMAIL="onboarding@resend.dev"
-
-NEXT_PUBLIC_GOOGLE_PLACES_API_KEY="api_key"
-
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=ta_cle_google_maps
-
-NEXT_PUBLIC_GEMINI_API_KEY=sk-ant-api03-ton-api-key-claude
 </file>
 
 <file path="src/components/home/Home.tsx">
-// src/components/home/Home.tsx (mise à jour)
+// src/components/home/Home.tsx (mise à jour avec intégration chatbot)
 "use client";
 
 import { Service } from "@/services/Service";
@@ -14081,9 +13829,10 @@ import { CustomCard } from "./CustomCard";
 import { SkeletonCard } from "./SkeletonCard";
 import GoogleMapRender from "../GoogleMap";
 import { Button } from "../ui/button";
-import { Search, Map, Grid, Filter } from "lucide-react";
+import { Search, Map, Grid, Filter, Sparkles } from "lucide-react";
 import { adaptPlacesForCards } from "@/utils/placeAdapter";
 import TravelChatbot from "../TravelChatbot";
+import { VisitHistory } from "./VisitHistory";
 
 export function Home() {
   const [places, setPlaces] = useState<PlaceResult[]>([]);
@@ -14092,6 +13841,13 @@ export function Home() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showMap, setShowMap] = useState<boolean>(false);
   const [filteredPlaces, setFilteredPlaces] = useState<PlaceResult[]>([]);
+  const [searchSource, setSearchSource] = useState<'manual' | 'chatbot'>('manual'); // Source de la recherche
+  
+  // États pour l'autocomplétion
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState<boolean>(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number>(-1);
 
   const { data: session } = useSession();
   const { currentUser, setCurrentUser } = useStore();
@@ -14101,7 +13857,6 @@ export function Home() {
     () => new Service("https://places.googleapis.com", "POST"),
     []
   );
-
   // Charger les lieux populaires d'Égypte au démarrage
   useEffect(() => {
     if (session?.user) {
@@ -14111,30 +13866,222 @@ export function Home() {
     loadPopularPlaces();
   }, [session]);
 
+  // Appliquer les filtres quand selectedTypes change et qu'on n'a pas de recherche active
+  useEffect(() => {
+    if (!query.trim() && places.length > 0) {
+      console.log('🔄 Application des filtres aux lieux populaires:', selectedTypes.length === 0 ? 'TOUS' : selectedTypes);
+      applyFilters(places, selectedTypes);
+    }
+  }, [selectedTypes, query]); // Surveiller selectedTypes et query, mais pas places pour éviter les boucles
+
+  // Appliquer les filtres quand les places sont chargés pour la première fois
+  useEffect(() => {
+    if (places.length > 0 && filteredPlaces.length === 0) {
+      console.log('🎯 Premier filtrage des lieux chargés');
+      applyFilters(places, selectedTypes);
+    }
+  }, [places.length]); // Seulement quand le nombre de places change
+
+  // Dans Home.tsx - REMPLACER la fonction handleQueryChange par celle-ci :
+
+// Gestion de l'autocomplétion avec Google Places API
+const handleQueryChange = async (value: string) => {
+  setQuery(value);
+  
+  // Si l'utilisateur tape manuellement, on remet en mode manual
+  if (searchSource === 'chatbot') {
+    setSearchSource('manual');
+  }
+
+  // Réinitialiser la sélection
+  setSelectedSuggestionIndex(-1);
+
+  // Autocomplétion après 3 caractères avec Google Places API
+  if (value.length >= 3) {
+    setIsLoadingSuggestions(true);
+    
+    try {
+      // Construire les types à inclure basés sur les filtres sélectionnés
+      let includedTypes: string[] = [];
+      if (selectedTypes.length > 0) {
+        includedTypes = selectedTypes;
+      } else {
+        // Si aucun filtre, inclure tous les types principaux
+        includedTypes = ["restaurant", "lodging", "tourist_attraction", "museum", "park"];
+      }
+
+      // Utiliser l'API Google Places Autocomplete
+      const autocompleteResults = await service.autocomplete({
+        input: value,
+        locationBias: {
+          circle: {
+            center: { latitude: 26.8206, longitude: 30.8025 }, // Centre de l'Égypte
+            radius: 50000// 500km de rayon
+          }
+        },
+        includedTypes: includedTypes,
+        languageCode: "fr"      });
+
+      if (autocompleteResults?.suggestions && autocompleteResults.suggestions.length > 0) {
+        // Extraire les textes des suggestions
+        const suggestionTexts = autocompleteResults.suggestions
+          .map((suggestion: any) => {
+            // Prioriser le texte principal (displayName)
+            if (suggestion.placePrediction?.text?.text) {
+              return suggestion.placePrediction.text.text;
+            }
+            // Fallback sur structuredFormat si disponible
+            if (suggestion.placePrediction?.structuredFormat?.mainText?.text) {
+              return suggestion.placePrediction.structuredFormat.mainText.text;
+            }
+            return null;
+          })
+          .filter(Boolean) // Supprimer les valeurs null
+          .slice(0, 5); // Limiter à 5 suggestions
+
+        setSuggestions(suggestionTexts);
+        setShowSuggestions(suggestionTexts.length > 0);
+      } else {
+        // Si pas de résultats de l'API, suggestions vides
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } catch (error) {
+      console.error("Erreur autocomplétion Google Places:", error);
+      
+      // En cas d'erreur, utiliser un fallback simple basé sur les filtres
+      const fallbackSuggestions = getFallbackSuggestions(value);
+      setSuggestions(fallbackSuggestions);
+      setShowSuggestions(fallbackSuggestions.length > 0);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  } else {
+    setShowSuggestions(false);
+    setSuggestions([]);
+  }
+};
+
+// Fonction de fallback en cas d'erreur API
+const getFallbackSuggestions = (value: string): string[] => {
+  const fallbackData: { [key: string]: string[] } = {
+    restaurant: [
+      "restaurants au Caire", "restaurants à Alexandrie", "restaurants à Luxor",
+      "Sequoia", "Abou Tarek", "Fish Market Alexandria", "restaurants égyptiens"
+    ],
+    lodging: [
+      "hôtels au Caire", "hôtels à Alexandrie", "hôtels à Luxor",
+      "Four Seasons Cairo", "Winter Palace Luxor", "hôtels de luxe Égypte"
+    ],
+    tourist_attraction: [
+      "Pyramides de Gizeh", "Temple de Karnak", "Vallée des Rois",
+      "Bibliothèque d'Alexandrie", "Khan el-Khalili", "attractions touristiques"
+    ]
+  };
+
+  let relevantSuggestions: string[] = [];
+
+  if (selectedTypes.length > 0) {
+    // Utiliser les suggestions basées sur les filtres sélectionnés
+    selectedTypes.forEach(type => {
+      if (fallbackData[type]) {
+        relevantSuggestions.push(...fallbackData[type]);
+      }
+    });
+  } else {
+    // Si aucun filtre, utiliser toutes les suggestions
+    relevantSuggestions = Object.values(fallbackData).flat();
+  }
+
+  // Filtrer par le texte saisi et limiter à 5
+  return relevantSuggestions
+    .filter(suggestion => 
+      suggestion.toLowerCase().includes(value.toLowerCase())
+    )
+    .slice(0, 5);
+};
+
+  // Sélectionner une suggestion
+  const selectSuggestion = (suggestion: string) => {
+    setQuery(suggestion);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    // Optionnel : lancer automatiquement la recherche
+    // performSearch(suggestion, 'manual');
+  };
+
+  // Gestion des touches clavier pour les suggestions
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        if (selectedSuggestionIndex >= 0) {
+          e.preventDefault();
+          selectSuggestion(suggestions[selectedSuggestionIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        break;
+    }
+  };
+
+  // Fermer les suggestions si on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.search-container')) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Fonction pour calculer le nombre max de résultats selon les filtres
   const getMaxResults = () => {
     const selectedCount = selectedTypes.length;
-    if (selectedCount === 0) return 8; // Par défaut
-    if (selectedCount === 1) return 2; // 2 si un seul type
-    if (selectedCount === 2) return 4; // 4 si deux types
-    return 6; // 6 si trois types ou plus
+    if (selectedCount === 0) return 20; // Tous types, demander plus
+    if (selectedCount === 1) return 8; // 1 type, bon nombre
+    if (selectedCount === 2) return 12; // 2 types, 6 par type
+    return 15; // 3 types, 5 par type
   };
 
   const loadPopularPlaces = async () => {
     setLoading(true);
     try {
-      const maxResults = getMaxResults();
+      const maxResults = 20; // Demander plus de lieux populaires pour avoir de la variété
       
-      // Recherche de lieux populaires en Égypte
+      // Recherche de lieux populaires en Égypte avec tous les types
       const results = await service.searchText({
-        textQuery: "best restaurants hotels attractions Egypt Cairo Alexandria Luxor",
+        textQuery: "popular places restaurants hotels tourist attractions museums Egypt Cairo Alexandria Luxor",
         languageCode: "fr",
         maxResultCount: maxResults,
       });
 
       if (results.places && results.places.length > 0) {
+        console.log('🏺 Lieux populaires chargés:', results.places.length, 'résultats');
+        console.log('🔍 Types trouvés:', Array.from(new Set(results.places.flatMap(p => p.types || []))));
         setPlaces(results.places);
-        setFilteredPlaces(results.places);
+        applyFilters(results.places, selectedTypes);
       } else {
         // Fallback avec searchNearby si searchText ne donne rien
         const nearbyResults = await service.searchNearby({
@@ -14144,14 +14091,15 @@ export function Home() {
               radius: 500000
             }
           },
-          includedTypes: ["restaurant", "lodging", "tourist_attraction"],
+          includedTypes: ["restaurant", "lodging", "tourist_attraction", "museum", "park", "zoo"],
           maxResultCount: maxResults,
           languageCode: "fr",
         });
         
         if (nearbyResults.places && nearbyResults.places.length > 0) {
+          console.log('🏺 Lieux proches chargés:', nearbyResults.places.length, 'résultats');
           setPlaces(nearbyResults.places);
-          setFilteredPlaces(nearbyResults.places);
+          applyFilters(nearbyResults.places, selectedTypes);
         }
       }
     } catch (error) {
@@ -14161,16 +14109,37 @@ export function Home() {
     }
   };
 
-  const handleSearch = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  // Fonction de recherche unifiée
+  const performSearch = async (searchQuery: string, source: 'manual' | 'chatbot' = 'manual') => {
+    if (!searchQuery.trim()) return;
 
     setLoading(true);
+    setSearchSource(source);
+    
     try {
       const maxResults = getMaxResults();
       
+      // Construire la requête en fonction des filtres sélectionnés
+      let enhancedQuery = searchQuery;
+      
+      // Si des filtres sont sélectionnés, on enrichit la requête
+      if (selectedTypes.length > 0) {
+        const typeLabels = selectedTypes.map(type => {
+          if (type === 'restaurant') return 'restaurants';
+          if (type === 'lodging') return 'hotels';
+          if (type === 'tourist_attraction') return 'attractions';
+          return type;
+        }).join(' ');
+        
+        enhancedQuery = `${typeLabels} ${searchQuery}`;
+        console.log('🔍 Requête enrichie avec filtres sélectionnés:', enhancedQuery);
+      } else {
+        // Aucun filtre sélectionné = recherche tous types de lieux
+        console.log('🔍 Recherche tous types (aucun filtre sélectionné):', enhancedQuery);
+      }
+      
       const results = await service.searchText({
-        textQuery: `${query} Égypte`,
+        textQuery: `${enhancedQuery} Égypte`,
         languageCode: "fr",
         maxResultCount: maxResults,
       });
@@ -14179,6 +14148,16 @@ export function Home() {
         const newPlaces = results.places;
         setPlaces(newPlaces);
         applyFilters(newPlaces);
+        
+        // Si la recherche vient du chatbot, faire défiler vers les résultats
+        if (source === 'chatbot') {
+          setTimeout(() => {
+            const resultsSection = document.getElementById('search-results');
+            if (resultsSection) {
+              resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 500);
+        }
       } else {
         // Aucun résultat trouvé
         setPlaces([]);
@@ -14191,7 +14170,12 @@ export function Home() {
     }
   };
 
-  const applyFilters = (placesToFilter: PlaceResult[] = places) => {
+  const handleSearch = async (e: FormEvent) => {
+    e.preventDefault();
+    await performSearch(query, 'manual');
+  };
+
+  const applyFilters = (placesToFilter: PlaceResult[] = places, newSelectedTypes?: string[]) => {
     let filtered = placesToFilter;
 
     if (selectedTypes.length > 0) {
@@ -14203,21 +14187,115 @@ export function Home() {
     setFilteredPlaces(filtered);
   };
 
-  const handleTypeFilter = (type: string) => {
+  const handleTypeFilter = async (type: string) => {
     const newSelectedTypes = selectedTypes.includes(type)
       ? selectedTypes.filter(t => t !== type)
       : [...selectedTypes, type];
     
     setSelectedTypes(newSelectedTypes);
     
-    // Appliquer les filtres
-    let filtered = places;
-    if (newSelectedTypes.length > 0) {
-      filtered = places.filter(place =>
-        place.types?.some(t => newSelectedTypes.includes(t))
-      );
+    // Si on a une requête de recherche active, relancer la recherche avec les nouveaux filtres
+    if (query.trim()) {
+      console.log('🔄 Relance de la recherche avec nouveaux filtres:', newSelectedTypes);
+      
+      // Utiliser les nouveaux filtres pour la recherche
+      await performSearchWithTypes(query, newSelectedTypes, searchSource);
+    } else {
+      // Sinon, juste filtrer les résultats actuels (lieux populaires)
+      applyFilters(places, newSelectedTypes);
     }
-    setFilteredPlaces(filtered);
+  };
+
+
+  const handlePlaceClick = async (place: any) => {
+    // D'abord naviguer vers la page de détails
+    router.push(`/places/${place.placeId}`);
+    
+    // Puis enregistrer la visite (seulement si l'utilisateur est connecté)
+    if (session?.user?.id) {
+      try {
+        await fetch('/api/visits', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            placeId: place.placeId,
+            placeName: place.name || place.displayName?.text || 'Lieu inconnu'
+          }),
+        });
+        
+        console.log('✅ Visite enregistrée:', place.name || place.displayName?.text);
+      } catch (error) {
+        console.error('❌ Erreur enregistrement visite:', error);
+        // On ne fait pas planter l'app si l'enregistrement échoue
+      }
+    }
+  };
+  // Nouvelle fonction pour rechercher avec des types spécifiques
+  const performSearchWithTypes = async (searchQuery: string, types: string[], source: 'manual' | 'chatbot' = 'manual') => {
+    if (!searchQuery.trim()) return;
+
+    setLoading(true);
+    setSearchSource(source);
+    
+    try {
+      const maxResults = getMaxResults();
+      
+      // Construire la requête en fonction des types fournis
+      let enhancedQuery = searchQuery;
+      
+      // Si des types sont fournis, on enrichit la requête
+      if (types.length > 0) {
+        const typeLabels = types.map(type => {
+          if (type === 'restaurant') return 'restaurants';
+          if (type === 'lodging') return 'hotels';
+          if (type === 'tourist_attraction') return 'tourist attractions museums';
+          return type;
+        }).join(' ');
+        
+        enhancedQuery = `${typeLabels} ${searchQuery}`;
+        console.log('🔍 Requête avec types spécifiés:', enhancedQuery, 'Types:', types);
+      } else {
+        // Aucun type spécifié = recherche TOUS types de lieux
+        enhancedQuery = `restaurants hotels tourist attractions museums parks ${searchQuery}`;
+        console.log('🔍 Recherche TOUS types:', enhancedQuery);
+      }
+      
+      const results = await service.searchText({
+        textQuery: `${enhancedQuery} Égypte`,
+        languageCode: "fr",
+        maxResultCount: Math.max(20, types.length * 5), // Plus de résultats pour avoir de la variété
+      });
+
+      if (results.places && results.places.length > 0) {
+        console.log('📊 Résultats trouvés:', results.places.length);
+        console.log('🏷️ Types dans les résultats:', Array.from(new Set(results.places.flatMap(p => p.types || []))));
+        
+        const newPlaces = results.places;
+        setPlaces(newPlaces);
+        applyFilters(newPlaces, types);
+        
+        // Si la recherche vient du chatbot, faire défiler vers les résultats
+        if (source === 'chatbot') {
+          setTimeout(() => {
+            const resultsSection = document.getElementById('search-results');
+            if (resultsSection) {
+              resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 500);
+        }
+      } else {
+        console.log('❌ Aucun résultat trouvé');
+        // Aucun résultat trouvé
+        setPlaces([]);
+        setFilteredPlaces([]);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la recherche :", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMarkerClick = (place: PlaceResult) => {
@@ -14228,9 +14306,22 @@ export function Home() {
   const handleChatbotRecommendation = (recommendations: any) => {
     // Optionnel : Mise à jour de la recherche basée sur les recommandations du chatbot
     console.log('Recommandations du chatbot:', recommendations);
+  };
+
+  // NOUVELLE FONCTION : Gestion des mises à jour de recherche depuis le chatbot
+  const handleChatbotSearchUpdate = (searchTerm: string) => {
+    console.log('🤖 Chatbot a suggéré une recherche:', searchTerm);
     
-    // Tu peux ici déclencher une recherche basée sur la localisation recommandée
-    // Par exemple : searchByLocation(recommendations.location);
+    // Mettre à jour seulement la barre de recherche principale (pas de recherche automatique)
+    setQuery(searchTerm);
+    setSearchSource('chatbot');
+    
+    // Fermer les suggestions d'autocomplétion
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    
+    // Pas de recherche automatique - l'utilisateur doit cliquer sur "Rechercher"
   };
 
   const getTypeLabel = (type: string) => {
@@ -14254,27 +14345,115 @@ export function Home() {
             Restaurants 🍽️, Hôtels 🏨 et Attractions Touristiques 🏛️
           </p>
 
-          {/* Barre de recherche */}
+          {/* Barre de recherche avec effet chatbot */}
           <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-6">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Rechercher des restaurants, hôtels..."
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+            <div className="search-container relative">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => handleQueryChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Rechercher..."
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:border-transparent transition-all duration-300 ${
+                      searchSource === 'chatbot' 
+                        ? 'border-yellow-400 focus:ring-yellow-500 shadow-yellow-200 shadow-md' 
+                        : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                    } ${showSuggestions ? 'rounded-b-none' : ''}`}
+                    autoComplete="off"
+                  />
+                  {searchSource === 'chatbot' && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 z-10">
+                      <Sparkles className="h-5 w-5 text-yellow-500 animate-pulse" />
+                    </div>
+                  )}
+                </div>
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                  className={`px-6 py-3 text-white transition-all duration-300 ${
+                    searchSource === 'chatbot'
+                      ? 'bg-yellow-600 hover:bg-yellow-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {loading ? "..." : "Rechercher"}
+                </Button>
               </div>
-              <Button 
-                type="submit" 
-                disabled={loading}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {loading ? "..." : "Rechercher"}
-              </Button>
-            </div>
+
+              {/* Suggestions d'autocomplétion */}
+              {showSuggestions && (
+                <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 border-l border-r border-b border-gray-300 dark:border-gray-600 rounded-b-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {isLoadingSuggestions ? (
+                    <div className="p-3 text-center text-gray-500 dark:text-gray-400">
+                      <div className="animate-spin inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2"></div>
+                      Recherche via Google Places...
+                    </div>
+                  ) : suggestions.length > 0 ? (
+                    <>
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => selectSuggestion(suggestion)}
+                          className={`w-full px-4 py-3 text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0 flex items-center gap-3 transition-colors ${
+                            index === selectedSuggestionIndex
+                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                          }`}
+                        >
+                          <Search className={`h-4 w-4 ${
+                            index === selectedSuggestionIndex 
+                              ? 'text-blue-600 dark:text-blue-400' 
+                              : 'text-gray-400'
+                          }`} />
+                          <span>{suggestion}</span>
+                          {/* Indicateur Google Places */}
+                          <span className="ml-auto text-xs text-green-600 dark:text-green-400">
+                            🌍 Places API
+                          </span>
+                        </button>
+                      ))}
+                      <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+                        {suggestions.length} suggestion{suggestions.length > 1 ? 's' : ''} Google Places
+                        {selectedTypes.length > 0 && (
+                          <span className="ml-2 text-blue-600 dark:text-blue-400">
+                            • Filtré sur {selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        <br />
+                        <span className="ml-1">↑↓ pour naviguer • ↵ pour sélectionner • ⎋ pour fermer</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-3 text-center text-gray-500 dark:text-gray-400">
+                      <div className="mb-2">🔍 Aucune suggestion Google Places</div>
+                      {selectedTypes.length > 0 ? (
+                        <div className="text-xs">
+                          Filtres actifs : {selectedTypes.map(t => getTypeLabel(t)).join(', ')}
+                        </div>
+                      ) : (
+                        <div className="text-xs">Essayez un terme plus spécifique</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div> {/* 👈 FERMETURE de search-container */}
+
+            {searchSource === 'chatbot' && (
+              <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 flex items-center justify-center gap-1 animate-fade-in">
+                <Sparkles className="h-4 w-4" />
+                Suggestion d'Anubis • Cliquez "Rechercher" pour lancer
+                {selectedTypes.length === 0 ? (
+                  <span className="ml-1 text-xs">(tous types de lieux)</span>
+                ) : (
+                  <span className="ml-1 text-xs">({selectedTypes.length} type(s) sélectionné(s))</span>
+                )}
+              </p>
+            )}
           </form>
 
           {/* Filtres et contrôles d'affichage */}
@@ -14296,6 +14475,15 @@ export function Home() {
                   {getTypeLabel(type)}
                 </Button>
               ))}
+              {selectedTypes.length === 0 ? (
+                <span className="text-xs text-green-600 dark:text-green-400 flex items-center ml-2">
+                  (tous types actifs)
+                </span>
+              ) : (
+                <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center ml-2">
+                  ({selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''} sélectionné{selectedTypes.length > 1 ? 's' : ''})
+                </span>
+              )}
             </div>
 
             {/* Bouton carte/grille */}
@@ -14329,24 +14517,32 @@ export function Home() {
             />
             <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">
               {filteredPlaces.length} lieu(x) affiché(s) sur la carte
-              {selectedTypes.length > 0 && (
+              {selectedTypes.length === 0 ? (
+                <span className="ml-2 text-green-600 dark:text-green-400">
+                  • Tous types de lieux • Max {getMaxResults()} résultats
+                </span>
+              ) : (
                 <span className="ml-2 text-blue-600 dark:text-blue-400">
-                  • Max {getMaxResults()} résultats selon filtres
+                  • Filtré sur {selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''} • Max {getMaxResults()} résultats
                 </span>
               )}
             </p>
           </div>
         ) : null}
 
-        {/* Grille des résultats */}
-        <div className="mb-8">
+                  {/* Grille des résultats */}
+        <div className="mb-8" id="search-results">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
               {query ? `Résultats pour "${query}"` : "Lieux populaires"}
+              {searchSource === 'chatbot' && (
+                <span className="ml-2 text-yellow-600 dark:text-yellow-400 text-lg">🤖</span>
+              )}
             </h2>
-            <span className="text-gray-600 dark:text-gray-400">
-              {filteredPlaces.length} résultat(s)
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-gray-600 dark:text-gray-400">
+              </span>
+            </div>
           </div>
 
           {loading ? (
@@ -14357,14 +14553,11 @@ export function Home() {
             </div>
           ) : filteredPlaces.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {adaptPlacesForCards(filteredPlaces).map((place, index) => (
+             {adaptPlacesForCards(filteredPlaces).map((place, index) => (
                 <CustomCard 
                   key={`${place.placeId}-${index}`} 
                   place={place}
-                  onClick={() => {
-                    // Navigation vers la page de détails du lieu avec Next.js router
-                    router.push(`/places/${place.placeId}`);
-                  }}
+                  onClick={() => handlePlaceClick(place)}  // 👈 CHANGEMENT ICI
                 />
               ))}
             </div>
@@ -14377,14 +14570,25 @@ export function Home() {
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
                   Essayez avec d'autres mots-clés
                 </p>
+                
               )}
+              
             </div>
           )}
         </div>
-      </div>
-      
-      {/* Chatbot de recommandations */}
-      <TravelChatbot onRecommendation={handleChatbotRecommendation} />
+        {/* 🎯 AJOUTER ICI LE BLOC VISITHISTORY - JUSTE APRÈS LA SECTION RÉSULTATS */}
+        {session?.user && (
+          <div className="mb-8">
+            <VisitHistory />
+          </div>
+        )}
+
+      </div>  {/* 👈 Cette div ferme probablement le container principal */}   
+      {/* Chatbot de recommandations avec intégration */}
+      <TravelChatbot 
+        onRecommendation={handleChatbotRecommendation}
+        onSearchUpdate={handleChatbotSearchUpdate}
+      />
     </div>
   );
 }

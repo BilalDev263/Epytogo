@@ -1,5 +1,7 @@
+// src/app/api/reviews/[placeId]/route.ts
 import { PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import { fetchGoogleReviews } from "@/services/PlacesReviewService";
 
 const prisma = new PrismaClient();
 
@@ -9,6 +11,8 @@ export async function GET(
   { params }: { params: { placeId: string } }
 ) {
   const { placeId } = params;
+  const { searchParams } = new URL(req.url);
+  const includeExternal = searchParams.get("external");
 
   if (!placeId) {
     return NextResponse.json(
@@ -18,16 +22,39 @@ export async function GET(
   }
 
   try {
-    const reviews = await prisma.review.findMany({
+    // Récupérer les avis internes
+    const internalReviews = await prisma.review.findMany({
       where: { placeId },
       include: {
         user: {
-          select: { firstname: true, lastname: true, image: true },
+          select: { id: true, firstname: true, lastname: true, image: true },
         },
       },
     });
-    return NextResponse.json(reviews, { status: 200 });
+
+    // Si on demande aussi les avis externes (Google)
+    if (includeExternal === "google") {
+      try {
+        const googleReviews = await fetchGoogleReviews(placeId);
+        return NextResponse.json({
+          internal: internalReviews,
+          google: googleReviews,
+        }, { status: 200 });
+      } catch (googleError) {
+        console.error("Erreur Google Reviews:", googleError);
+        // Retourner quand même les avis internes si Google échoue
+        return NextResponse.json({
+          internal: internalReviews,
+          google: [],
+          googleError: "Impossible de récupérer les avis Google"
+        }, { status: 200 });
+      }
+    }
+
+    // Retourner seulement les avis internes
+    return NextResponse.json(internalReviews, { status: 200 });
   } catch (error) {
+    console.error("Erreur database:", error);
     return NextResponse.json(
       { error: "Failed to fetch reviews" },
       { status: 500 }

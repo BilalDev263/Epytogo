@@ -723,6 +723,7 @@ const getFallbackSuggestions = (value: string): string[] => {
             </h2>
             <div className="flex items-center gap-4">
               <span className="text-gray-600 dark:text-gray-400">
+                {filteredPlaces.length} résultat(s)
               </span>
             </div>
           </div>

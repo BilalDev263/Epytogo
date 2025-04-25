@@ -24,4 +24,13 @@ declare global {
       readonly SMTP_PASS: string;
     }
   }
+
+  export interface GoogleReview {
+    reviewId: string;
+    authorName: string;
+    profilePhotoUrl: string;
+    rating: number;        // 1-5
+    comment: string;
+    createTime: string;    // ISO 8601
+  }
 }
