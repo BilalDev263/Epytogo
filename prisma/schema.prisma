@@ -8,17 +8,17 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  firstname     String
-  lastname      String
-  email         String   @unique
-  password      String
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  firstname     String?   // Optionnel pour Google Auth
+  lastname      String?   // Optionnel pour Google Auth
+  email         String    @unique
+  password      String?   // Optionnel pour Google Auth
   emailVerified DateTime?
   image         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   reviews       Review[]
-  visits        Visit[]  // Nouvelle relation pour l'historique des visites
+  visits        Visit[]
 }
 
 model Review {
@@ -32,11 +32,10 @@ model Review {
   user      User     @relation(fields: [userId], references: [id])
 }
 
-// Modèle simple pour l'historique des visites
 model Visit {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  placeId   String   // Google Places ID
-  placeName String   // Nom de l'établissement
+  placeId   String
+  placeName String
   visitedAt DateTime @default(now())
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])

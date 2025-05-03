@@ -1,3 +1,4 @@
+// src/components/Login.tsx
 "use client";
 import { Input } from "@/components/ui/input";
 import { usePathname } from "next/navigation";
@@ -10,6 +11,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { SubmitButton } from "./form/SubmitButton";
 import { useUserQuery } from "@/hooks/useUserQuery";
 import { EgyptianCarousel } from "./EgyptianCarousel";
+import { GoogleAuthButton } from "./auth/GoogleAuthButton";
+
 type Props = {
   className?: string;
   callbackUrl?: string;
@@ -45,6 +48,21 @@ export const Login = ({ className, callbackUrl }: Props) => {
         >
           Connectez-vous
         </Title>
+
+        {/* Bouton Google */}
+        <GoogleAuthButton callbackUrl={callbackUrl} isLoading={isSubmitting} />
+
+        {/* Séparateur */}
+        <div className="relative w-full">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+              Ou continuez avec
+            </span>
+          </div>
+        </div>
 
         <Input
           className="h-12 w-full"
