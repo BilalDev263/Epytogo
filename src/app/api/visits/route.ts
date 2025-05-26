@@ -1,7 +1,7 @@
 // src/app/api/visits/route.ts - VERSION SIMPLE
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/auth/auth";
 import { getLastVisits, recordVisit } from "@/db/visit";
 
 // Récupérer l'historique des visites
