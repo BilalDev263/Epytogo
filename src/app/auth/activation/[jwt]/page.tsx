@@ -1,3 +1,4 @@
+// src/app/auth/activation/[jwt]/page.tsx
 import { activateUserAction } from "@/actions/activate";
 import Link from "next/link";
 
@@ -16,27 +17,32 @@ const responseDetails: Record<
     message: string;
     link: { href: string; text: string };
     colorClass: string;
+    description: string;
   }
 > = {
   userNotExist: {
     message: "L'utilisateur correspondant à ce lien n'existe pas.",
     link: { href: "/register", text: "Retourner à l'inscription" },
     colorClass: "text-red-500",
+    description: "Il est possible que ce lien soit invalide ou que l'utilisateur ait été supprimé."
   },
   alreadyActivated: {
     message: "Votre compte est déjà activé.",
     link: { href: "/auth/login", text: "Aller à la connexion" },
     colorClass: "text-yellow-500",
+    description: "Vous pouvez vous connecter directement à l'aide de vos identifiants."
   },
   success: {
     message: "Félicitations ! Votre compte a été activé avec succès.",
     link: { href: "/auth/login", text: "Aller à la connexion" },
     colorClass: "text-green-500",
+    description: "Vous pouvez maintenant vous connecter avec vos identifiants."
   },
   error: {
     message: "Oups ! Une erreur est survenue.",
     link: { href: "/register", text: "Retourner à l'inscription" },
     colorClass: "text-red-500",
+    description: "Nous avons rencontré un problème lors de l'activation de votre compte. Veuillez réessayer plus tard."
   },
 };
 
@@ -46,44 +52,50 @@ const ResponseMessage: React.FC<{
   message: string;
   link: { href: string; text: string };
   colorClass: string;
-}> = ({ message, link, colorClass }) => (
-  <div className="text-center">
-    <p className={`${colorClass} text-2xl font-bold`}>{message}</p>
-    <p className="mt-2 text-gray-700">
-      {colorClass === "text-red-500"
-        ? "Il est possible que ce lien soit invalide ou que l'utilisateur ait été supprimé."
-        : colorClass === "text-yellow-500"
-        ? "Vous pouvez vous connecter directement à l'aide de vos identifiants."
-        : colorClass === "text-green-500"
-        ? "Vous pouvez maintenant vous connecter avec vos identifiants."
-        : "Nous avons rencontré un problème lors de l'activation de votre compte. Veuillez réessayer plus tard."}
-    </p>
-    <Link className="mt-4 text-blue-500 underline" href={link.href}>
+  description: string;
+}> = ({ message, link, colorClass, description }) => (
+  <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-center">
+    <div className={`text-5xl mb-4 ${
+      colorClass === "text-green-500" ? "text-green-500" : 
+      colorClass === "text-yellow-500" ? "text-yellow-500" : 
+      "text-red-500"
+    }`}>
+      {colorClass === "text-green-500" ? "✅" : 
+       colorClass === "text-yellow-500" ? "⚠️" : 
+       "❌"}
+    </div>
+    <h1 className={`${colorClass} text-2xl font-bold mb-4`}>{message}</h1>
+    <p className="text-gray-600 dark:text-gray-300 mb-6">{description}</p>
+    <Link 
+      className="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-200" 
+      href={link.href}
+    >
       {link.text}
     </Link>
   </div>
 );
 
 const ActivationPage = async ({ params }: Props) => {
-  const data = await activateUserAction(params.jwt);
+  let data: ResponseType;
+  
+  try {
+    data = await activateUserAction(params.jwt);
+  } catch (error) {
+    console.error("Erreur lors de l'activation:", error);
+    data = "error";
+  }
+
+  const responseConfig = responseDetails[data] || responseDetails.error;
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center p-4 bg-gray-100">
-      {data in responseDetails ? (
-        <ResponseMessage
-          type={data as ResponseType}
-          message={responseDetails[data as ResponseType].message}
-          link={responseDetails[data as ResponseType].link}
-          colorClass={responseDetails[data as ResponseType].colorClass}
-        />
-      ) : (
-        <ResponseMessage
-          type="error"
-          message="Une erreur inattendue est survenue."
-          link={{ href: "/register", text: "Retourner à l'inscription" }}
-          colorClass="text-red-500"
-        />
-      )}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4 transition-colors duration-300">
+      <ResponseMessage
+        type={data}
+        message={responseConfig.message}
+        link={responseConfig.link}
+        colorClass={responseConfig.colorClass}
+        description={responseConfig.description}
+      />
     </div>
   );
 };
