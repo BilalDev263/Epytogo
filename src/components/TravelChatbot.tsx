@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, ExternalLink } from 'lucide-react';
 import { GeminiGoogleService, ChatMessage } from '@/services/GeminiGoogleService';
+import { useRouter } from 'next/navigation';
 
 interface Message {
   id: string;
@@ -16,6 +17,7 @@ interface ChatbotProps {
 }
 
 const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick, onSearchUpdate }) => {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -48,6 +50,78 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const createPlaceLink = (placeName: string, placeId?: string) => {
+    const handleClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (placeId) {
+        router.push(`/places/${placeId}`);
+      } else {
+        if (onSearchUpdate) {
+          onSearchUpdate(placeName);
+          setIsOpen(false);
+        }
+      }
+    };
+
+    return (
+      <button
+        onClick={handleClick}
+        className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 underline decoration-dotted inline-flex items-center gap-1 transition-colors"
+      >
+        {placeName}
+        <ExternalLink className="h-3 w-3" />
+      </button>
+    );
+  };
+
+  const parseMessageWithLinks = (content: string) => {
+    const placePatterns = [
+      /\*\*(.*?)\*\*/g,
+      /(Hotel|Restaurant|Hôtel|Temple|Pyramide|Musée|Palace|Palais|Resort|Café|Bar|Club)\s+([A-ZÀ-Ÿ][A-Za-zÀ-ÿ\s\-']{2,})/gi,
+      /(Le Caire|Cairo|Alexandrie|Alexandria|Luxor|Louxor|Assouan|Aswan|Gizeh|Giza|Sharm El Sheikh|Hurghada|Memphis|Saqqara|Karnak|Dahab|El Gouna)/gi,
+      /(\d+[,\s]*[A-ZÀ-Ÿ][A-Za-zÀ-ÿ\s\-']{3,}[,\s]*(?:Rue|Street|Avenue|Ave|Boulevard|Bd|Place|Sq|Square)[A-Za-zÀ-ÿ\s\-',]*)/gi
+    ];
+
+    let processedContent = content;
+    const linkElements: { [key: string]: JSX.Element } = {};
+    let linkCounter = 0;
+
+    placePatterns.forEach((pattern, patternIndex) => {
+      const matches = [...content.matchAll(pattern)];
+      matches.forEach((match) => {
+        const fullMatch = match[0];
+        let placeName;
+        
+        if (patternIndex === 0) {
+          placeName = match[1];
+        } else if (patternIndex === 1) {
+          placeName = `${match[1]} ${match[2]}`.trim();
+        } else if (patternIndex === 3) {
+          placeName = fullMatch.length > 50 ? fullMatch.substring(0, 47) + '...' : fullMatch;
+        } else {
+          placeName = fullMatch;
+        }
+        
+        const linkKey = `LINK_${linkCounter}`;
+        linkCounter++;
+        
+        if (!linkElements[linkKey]) {
+          linkElements[linkKey] = createPlaceLink(placeName.replace(/\*\*/g, ''));
+          processedContent = processedContent.replace(fullMatch, linkKey);
+        }
+      });
+    });
+
+    const parts = processedContent.split(/(LINK_\d+)/);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('LINK_') && linkElements[part]) {
+        return <span key={index}>{linkElements[part]}</span>;
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
 
   const extractSearchTerms = (userMessage: string, botMessage: string): string | null => {
     const fullText = `${userMessage} ${botMessage}`.toLowerCase();
@@ -250,7 +324,7 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
                     : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md shadow-md border-l-4 border-yellow-600'
                 } px-4 py-3`}>
                   <div className="text-sm leading-relaxed whitespace-pre-line">
-                    {message.content}
+                    {message.type === 'bot' ? parseMessageWithLinks(message.content) : message.content}
                   </div>
                   
                   <p className="text-xs opacity-70 mt-2">
