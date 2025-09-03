@@ -1,4 +1,3 @@
-// src/providers/ThemeProvider.tsx
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
@@ -24,7 +23,6 @@ export function ThemeProvider({
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    // Récupérer le thème depuis localStorage au chargement
     const savedTheme = localStorage.getItem("epytogo-theme") as Theme;
     if (savedTheme) {
       setTheme(savedTheme);
@@ -49,11 +47,9 @@ export function ThemeProvider({
     root.classList.add(newResolvedTheme);
     setResolvedTheme(newResolvedTheme);
 
-    // Sauvegarder dans localStorage
     localStorage.setItem("epytogo-theme", theme);
   }, [theme]);
 
-  // Écouter les changements de préférence système
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     
@@ -79,7 +75,6 @@ export function ThemeProvider({
   );
 }
 
-// Hook personnalisé pour utiliser le thème
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
@@ -88,5 +83,4 @@ export function useTheme() {
   return context;
 }
 
-// src/hooks/useTheme.ts (export séparé pour faciliter l'import)
 export { useTheme as useThemeHook } from "@/providers/ThemeProvider";

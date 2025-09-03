@@ -1,4 +1,3 @@
-// src/components/ui/ThemeToggle.tsx
 "use client";
 
 import { useTheme } from "@/providers/ThemeProvider";
@@ -22,7 +21,6 @@ export function ThemeToggle() {
 
   return (
     <div className="relative">
-      {/* Bouton principal */}
       <Button
         variant="ghost"
         size="icon"
@@ -38,7 +36,6 @@ export function ThemeToggle() {
       >
         <CurrentIcon className="h-5 w-5 transition-transform duration-300" />
         
-        {/* Indicateur de mode actuel */}
         <div className={cn(
           "absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 transition-all duration-300",
           resolvedTheme === "dark" 
@@ -48,16 +45,13 @@ export function ThemeToggle() {
         )} />
       </Button>
 
-      {/* Menu déroulant */}
       {isOpen && (
         <>
-          {/* Overlay pour fermer */}
           <div 
             className="fixed inset-0 z-10" 
             onClick={() => setIsOpen(false)} 
           />
           
-          {/* Menu */}
           <div className="absolute right-0 top-12 z-20 w-48 py-2 bg-white/95 dark:bg-slate-800/90 backdrop-blur-xl rounded-xl border border-gray-200 dark:border-white/20 shadow-2xl">
             {themes.map((themeOption) => {
               const Icon = themeOption.icon;
@@ -81,7 +75,6 @@ export function ThemeToggle() {
                   <Icon className="h-4 w-4" />
                   <span className="font-medium">{themeOption.label}</span>
                   
-                  {/* Indicateur actif */}
                   {isActive && (
                     <div className="ml-auto w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
                   )}
@@ -89,7 +82,6 @@ export function ThemeToggle() {
               );
             })}
             
-            {/* Info sur le mode système */}
             {theme === "system" && (
               <div className="mx-4 mt-2 pt-2 border-t border-gray-200 dark:border-white/10">
                 <p className="text-xs text-gray-500 dark:text-white/60">
@@ -104,7 +96,6 @@ export function ThemeToggle() {
   );
 }
 
-// Version simplifiée pour mobile
 export function ThemeToggleSimple() {
   const { resolvedTheme, setTheme } = useTheme();
 

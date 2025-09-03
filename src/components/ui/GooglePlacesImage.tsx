@@ -1,4 +1,3 @@
-// src/components/ui/GooglePlacesImage.tsx
 "use client";
 
 import Image from "next/image";
@@ -26,7 +25,6 @@ export const GooglePlacesImage = ({
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
 
-  // Si pas de photo ou erreur, afficher le gradient avec icône
   if (!photoName || imageError) {
     return (
       <div className={`relative bg-gradient-to-br ${fallbackGradient} overflow-hidden ${className}`}>
@@ -44,7 +42,6 @@ export const GooglePlacesImage = ({
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      {/* Skeleton pendant le chargement */}
       {imageLoading && (
         <div className={`absolute inset-0 bg-gradient-to-br ${fallbackGradient} animate-pulse z-10`}>
           <div className="absolute inset-0 bg-black/20"></div>
@@ -56,7 +53,6 @@ export const GooglePlacesImage = ({
         </div>
       )}
       
-      {/* Image réelle */}
       <Image
         src={imageUrl}
         alt={alt}
@@ -72,7 +68,6 @@ export const GooglePlacesImage = ({
         }}
       />
       
-      {/* Overlay sombre */}
       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all duration-300 z-5"></div>
     </div>
   );

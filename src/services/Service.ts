@@ -1,4 +1,3 @@
-// src/services/Service.ts - Version complète avec nouvelles méthodes
 import { 
   PlaceResult, 
   ServiceInterface, 
@@ -12,14 +11,13 @@ type Method = "GET" | "POST" | "PUT" | "DELETE";
 export class Service implements ServiceInterface {
   apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "";
 
-  private maxResults = 1;// ← Change à 40 pour la présentation
+  private maxResults = 1;
 
   constructor(public baseUrl: string, public method: Method) {
     this.baseUrl = baseUrl;
     this.method = method;
   }
 
-  // 🆕 Nouvelles méthodes pour gérer maxResults
   getMaxResults(): number {
     return this.maxResults;
   }
@@ -28,7 +26,6 @@ export class Service implements ServiceInterface {
     this.maxResults = max;
   }
 
-  // 🆕 Méthodes privées pour organiser et limiter par catégorie
   private organizeByType(places: PlaceResult[]): any {
     const hotels = places.filter(place => 
       place.types?.some((type: string) => ['lodging', 'hotel', 'motel', 'resort'].includes(type))
@@ -61,18 +58,16 @@ export class Service implements ServiceInterface {
     const organized = this.organizeByType(places);
     const limited = this.limitByMaxResults(organized);
     
-    // Recombiner les résultats limités
     return [...limited.hotels, ...limited.restaurants, ...limited.attractions];
   }
 
-  // 🆕 Nouvelle méthode : Recherche par proximité pour la carte
   async searchNearby(params: SearchNearbyParams): Promise<GooglePlacesResponse> {
     const url = `${this.baseUrl}/v1/places:searchNearby`;
     
     const body = JSON.stringify({
       locationRestriction: params.locationRestriction,
       includedTypes: params.includedTypes,
-      maxResultCount: Math.min(params.maxResultCount, 20), // Google limite à 20
+      maxResultCount: Math.min(params.maxResultCount, 20),
       languageCode: params.languageCode,
     });
 
@@ -96,7 +91,6 @@ export class Service implements ServiceInterface {
 
     const result = await response.json();
     
-    // Appliquer la limitation maxResults par catégorie
     const filteredPlaces = this.applyMaxResultsFilter(result.places || []);
     
     return {
@@ -104,13 +98,12 @@ export class Service implements ServiceInterface {
     };
   }
 
-  // 🆕 Nouvelle méthode : Recherche par texte pour la carte
   async searchText(params: SearchTextParams): Promise<GooglePlacesResponse> {
     const url = `${this.baseUrl}/v1/places:searchText`;
     
     const body = JSON.stringify({
       textQuery: params.textQuery,
-      maxResultCount: Math.min(params.maxResultCount, 20), // Google limite à 20
+      maxResultCount: Math.min(params.maxResultCount, 20),
       languageCode: params.languageCode,
     });
 
@@ -134,7 +127,6 @@ export class Service implements ServiceInterface {
 
     const result = await response.json();
     
-    // Appliquer la limitation maxResults par catégorie
     const filteredPlaces = this.applyMaxResultsFilter(result.places || []);
     
     return {
@@ -142,7 +134,6 @@ export class Service implements ServiceInterface {
     };
   }
 
-  // Méthodes existantes (avec application des limites)
   async searchByText({
     query,
     type,
@@ -162,7 +153,7 @@ export class Service implements ServiceInterface {
     const body = JSON.stringify({
       textQuery,
       includedType: type,
-      maxResultCount: Math.max(this.maxResults * 3, 20), // Demander plus pour avoir le choix
+      maxResultCount: Math.max(this.maxResults * 3, 20),
     });
 
     const requestHeaders = new Headers();
@@ -186,7 +177,6 @@ export class Service implements ServiceInterface {
     const result = await response.json();
     const places = result.places || [];
     
-    // Appliquer la limitation selon le type recherché
     if (type === 'restaurant') {
       return places.slice(0, this.maxResults);
     } else if (type === 'lodging') {
@@ -229,7 +219,6 @@ export class Service implements ServiceInterface {
       name,
     });
 
-    // Limiter chaque catégorie selon maxResults
     const limitedRestaurants = restaurants.slice(0, this.maxResults);
     const limitedHotels = hotels.slice(0, this.maxResults);
 
@@ -261,7 +250,6 @@ export class Service implements ServiceInterface {
 
 
 
-// REMPLACER ta méthode autocomplete par celle-ci (NOUVELLE API CORRIGÉE) :
 
 async autocomplete(params: {
   input: string;
@@ -271,24 +259,18 @@ async autocomplete(params: {
   maxResultCount?: number; // On garde pour compatibilité
 }) {
   try {
-    // 🎯 Construire le body selon la nouvelle API
     const requestBody = {
       input: params.input,
-      // 👈 CHANGEMENT : includedPrimaryTypes au lieu de includedTypes
       ...(params.includedTypes && params.includedTypes.length > 0 && {
         includedPrimaryTypes: params.includedTypes
       }),
-      // 👈 CHANGEMENT : includedRegionCodes pour limiter à l'Égypte
       includedRegionCodes: ["eg"],
-      // 👈 CHANGEMENT : languageCode
       ...(params.languageCode && { languageCode: params.languageCode }),
-      // 👈 NOUVEAU : sessionToken pour optimiser les coûts
       sessionToken: crypto.randomUUID(),
-      // 👈 NOUVEAU : locationRestriction avec un rectangle de l'Égypte
       locationRestriction: {
         rectangle: {
-          low: { latitude: 22.0, longitude: 24.7 },  // Sud-Ouest de l'Égypte
-          high: { latitude: 31.7, longitude: 36.9 }   // Nord-Est de l'Égypte
+          low: { latitude: 22.0, longitude: 24.7 },
+          high: { latitude: 31.7, longitude: 36.9 }
         }
       }
     };
@@ -298,7 +280,6 @@ async autocomplete(params: {
     const requestHeaders = new Headers();
     requestHeaders.set("Content-Type", "application/json");
     requestHeaders.set("X-Goog-Api-Key", this.apiKey);
-    // 👈 CHANGEMENT : FieldMask simplifié selon ta doc
     requestHeaders.set(
       "X-Goog-FieldMask", 
       "suggestions.placePrediction.text,suggestions.placePrediction.placeId"

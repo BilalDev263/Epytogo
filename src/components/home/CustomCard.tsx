@@ -1,4 +1,3 @@
-// src/components/home/CustomCard.tsx - Version modernisée
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -28,7 +27,6 @@ export const CustomCard = ({ className, place, onClick }: CustomCardProps) => {
       )}
       onClick={onClick}
     >
-      {/* Image Google Places */}
       <div className="relative h-48">
         <GooglePlacesImage
           photoName={place.photo}
@@ -38,7 +36,6 @@ export const CustomCard = ({ className, place, onClick }: CustomCardProps) => {
           maxHeight={300}
         />
         
-        {/* Badge de rating */}
         {place.rating > 0 && (
           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1 z-10">
             <Star className="w-4 h-4 text-yellow-500 fill-current" />
@@ -46,7 +43,6 @@ export const CustomCard = ({ className, place, onClick }: CustomCardProps) => {
           </div>
         )}
 
-        {/* Badge statut ouvert/fermé */}
         <div className="absolute top-4 left-4 z-10">
           <div className={cn(
             "px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm",
@@ -65,20 +61,17 @@ export const CustomCard = ({ className, place, onClick }: CustomCardProps) => {
         </div>
       </div>
       
-      {/* Contenu de la carte */}
       <div className="p-6">
         <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors line-clamp-2">
           {place.name}
         </h3>
         
         <div className="space-y-2 mb-4">
-          {/* Adresse */}
           <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2 text-sm">
             <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
             <span className="line-clamp-2">{place.address}</span>
           </p>
           
-          {/* Téléphone */}
           {place.phoneNumber && (
             <p className="text-gray-600 dark:text-gray-300 flex items-center gap-2 text-sm">
               <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
@@ -87,9 +80,7 @@ export const CustomCard = ({ className, place, onClick }: CustomCardProps) => {
           )}
         </div>
 
-        {/* Footer avec rating et bouton */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-slate-700">
-          {/* Rating détaillé */}
           <div className="flex items-center gap-2">
             {place.rating > 0 ? (
               <div className="flex items-center gap-1">
@@ -115,7 +106,6 @@ export const CustomCard = ({ className, place, onClick }: CustomCardProps) => {
             )}
           </div>
           
-          {/* Bouton voir détails */}
           <button 
             className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 font-medium text-sm hover:underline transition-colors"
             onClick={(e) => {

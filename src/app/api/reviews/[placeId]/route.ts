@@ -1,11 +1,9 @@
-// src/app/api/reviews/[placeId]/route.ts
 import { PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchGoogleReviews } from "@/services/PlacesReviewService";
 
 const prisma = new PrismaClient();
 
-// Gestionnaire pour les requêtes GET
 export async function GET(
   req: NextRequest,
   { params }: { params: { placeId: string } }
@@ -22,7 +20,6 @@ export async function GET(
   }
 
   try {
-    // Récupérer les avis internes
     const internalReviews = await prisma.review.findMany({
       where: { placeId },
       include: {
@@ -32,7 +29,6 @@ export async function GET(
       },
     });
 
-    // Si on demande aussi les avis externes (Google)
     if (includeExternal === "google") {
       try {
         const googleReviews = await fetchGoogleReviews(placeId);
@@ -42,7 +38,6 @@ export async function GET(
         }, { status: 200 });
       } catch (googleError) {
         console.error("Erreur Google Reviews:", googleError);
-        // Retourner quand même les avis internes si Google échoue
         return NextResponse.json({
           internal: internalReviews,
           google: [],
@@ -51,7 +46,6 @@ export async function GET(
       }
     }
 
-    // Retourner seulement les avis internes
     return NextResponse.json(internalReviews, { status: 200 });
   } catch (error) {
     console.error("Erreur database:", error);
@@ -62,7 +56,6 @@ export async function GET(
   }
 }
 
-// Gestionnaire pour les requêtes POST
 export async function POST(
   req: NextRequest,
   { params }: { params: { placeId: string } }

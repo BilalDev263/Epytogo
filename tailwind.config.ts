@@ -1,8 +1,7 @@
-// tailwind.config.js - Version avec dark mode
 import type { Config } from "tailwindcss";
 
 const config = {
-  darkMode: ["class"], // Active le dark mode via classe CSS
+  darkMode: ["class"],
   content: [
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -59,7 +58,6 @@ const config = {
           foreground: "hsl(var(--card-foreground))",
         },
         
-        // Couleurs personnalisées Epytogo
         epytogo: {
           primary: "hsl(var(--epytogo-primary))",
           secondary: "hsl(var(--epytogo-secondary))",

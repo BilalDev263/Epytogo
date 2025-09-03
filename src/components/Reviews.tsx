@@ -1,4 +1,3 @@
-// src/components/Reviews.tsx
 "use client";
 import { useEffect, useState } from "react";
 

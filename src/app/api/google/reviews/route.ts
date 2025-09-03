@@ -1,4 +1,3 @@
-// src/app/api/google/reviews/route.ts
 import { fetchGoogleReviews } from "@/services/PlacesReviewService";
 import { NextRequest, NextResponse } from "next/server";
 

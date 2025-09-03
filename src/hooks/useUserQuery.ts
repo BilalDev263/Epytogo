@@ -34,13 +34,29 @@ export const useUserQuery = () => {
       const { accepted, confirmPassword, ...user } = data;
       try {
         const newUser = await registerAction(user);
-        showToast({
-          title: "Inscription réussie",
-          description:
-            "un email de confirmation a été envoyé sur votre boite mail",
-          variant: "default",
-          redirectTo: "/auth/login",
+        
+        const signInResponse = await signIn("credentials", {
+          redirect: false,
+          email: user.email,
+          password: user.password,
         });
+
+        if (signInResponse?.ok) {
+          showToast({
+            title: "Inscription réussie",
+            description: "Votre compte a été créé et vous êtes maintenant connecté !",
+            variant: "default",
+            redirectTo: "/",
+          });
+        } else {
+          showToast({
+            title: "Inscription réussie",
+            description: "Votre compte a été créé. Veuillez vous connecter.",
+            variant: "default",
+            redirectTo: "/auth/login",
+          });
+        }
+        
         reset();
         return newUser;
       } catch (error) {

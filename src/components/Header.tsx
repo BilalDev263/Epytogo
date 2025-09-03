@@ -1,4 +1,3 @@
-// src/components/Header.tsx - Version avec dark mode
 "use client";
 
 import { Navigation } from "./navigation/HomeNav";
@@ -16,7 +15,6 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 transition-all duration-300 shadow-sm">
       <Container className="flex h-20 items-center justify-between px-4 md:px-8">
-        {/* Logo modernisé */}
         <div className="flex items-center gap-3">
           <div className="relative w-12 h-12 epytogo-gradient rounded-xl flex items-center justify-center group-hover:shadow-lg transition-all duration-300">
             <Image
@@ -33,13 +31,11 @@ export const Header = () => {
           </div>
         </div>
 
-        {/* Navigation desktop */}
         <nav className="hidden md:flex items-center gap-6">
           <Navigation navItems={navItemsHeader} />
           <ThemeToggle />
         </nav>
 
-        {/* Navigation mobile */}
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
           <button
@@ -50,7 +46,6 @@ export const Header = () => {
           </button>
         </div>
 
-        {/* Menu mobile */}
         {isMobileMenuOpen && (
           <div className="absolute top-full left-0 right-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 md:hidden">
             <div className="container mx-auto px-4 py-6">

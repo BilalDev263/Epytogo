@@ -1,4 +1,3 @@
-// src/components/Login.tsx
 "use client";
 import { Input } from "@/components/ui/input";
 import { usePathname } from "next/navigation";
@@ -49,10 +48,8 @@ export const Login = ({ className, callbackUrl }: Props) => {
           Connectez-vous
         </Title>
 
-        {/* Bouton Google */}
         <GoogleAuthButton callbackUrl={callbackUrl} isLoading={isSubmitting} />
 
-        {/* Séparateur */}
         <div className="relative w-full">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300 dark:border-gray-600" />

@@ -1,4 +1,3 @@
-// src/components/home/Home.tsx (mise à jour avec intégration chatbot)
 "use client";
 
 import { Service } from "@/services/Service";
@@ -23,9 +22,8 @@ export function Home() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showMap, setShowMap] = useState<boolean>(false);
   const [filteredPlaces, setFilteredPlaces] = useState<PlaceResult[]>([]);
-  const [searchSource, setSearchSource] = useState<'manual' | 'chatbot'>('manual'); // Source de la recherche
+  const [searchSource, setSearchSource] = useState<'manual' | 'chatbot'>('manual');
   
-  // États pour l'autocomplétion
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState<boolean>(false);
@@ -39,99 +37,82 @@ export function Home() {
     () => new Service("https://places.googleapis.com", "POST"),
     []
   );
-  // Charger les lieux populaires d'Égypte au démarrage
   useEffect(() => {
     if (session?.user) {
       setCurrentUser(session.user);
     }
-    // Charger les lieux populaires même sans utilisateur connecté
     loadPopularPlaces();
   }, [session]);
 
-  // Appliquer les filtres quand selectedTypes change et qu'on n'a pas de recherche active
   useEffect(() => {
     if (!query.trim() && places.length > 0) {
       console.log('🔄 Application des filtres aux lieux populaires:', selectedTypes.length === 0 ? 'TOUS' : selectedTypes);
       applyFilters(places, selectedTypes);
     }
-  }, [selectedTypes, query]); // Surveiller selectedTypes et query, mais pas places pour éviter les boucles
+  }, [selectedTypes, query]);
 
-  // Appliquer les filtres quand les places sont chargés pour la première fois
   useEffect(() => {
     if (places.length > 0 && filteredPlaces.length === 0) {
       console.log('🎯 Premier filtrage des lieux chargés');
       applyFilters(places, selectedTypes);
     }
-  }, [places.length]); // Seulement quand le nombre de places change
+  }, [places.length]);
 
-  // Dans Home.tsx - REMPLACER la fonction handleQueryChange par celle-ci :
 
-// Gestion de l'autocomplétion avec Google Places API
 const handleQueryChange = async (value: string) => {
   setQuery(value);
   
-  // Si l'utilisateur tape manuellement, on remet en mode manual
   if (searchSource === 'chatbot') {
     setSearchSource('manual');
   }
 
-  // Réinitialiser la sélection
   setSelectedSuggestionIndex(-1);
 
-  // Autocomplétion après 3 caractères avec Google Places API
   if (value.length >= 3) {
     setIsLoadingSuggestions(true);
     
     try {
-      // Construire les types à inclure basés sur les filtres sélectionnés
       let includedTypes: string[] = [];
       if (selectedTypes.length > 0) {
         includedTypes = selectedTypes;
       } else {
-        // Si aucun filtre, inclure tous les types principaux
         includedTypes = ["restaurant", "lodging", "tourist_attraction", "museum", "park"];
       }
 
-      // Utiliser l'API Google Places Autocomplete
       const autocompleteResults = await service.autocomplete({
         input: value,
         locationBias: {
           circle: {
-            center: { latitude: 26.8206, longitude: 30.8025 }, // Centre de l'Égypte
-            radius: 50000// 500km de rayon
+            center: { latitude: 26.8206, longitude: 30.8025 },
+            radius: 50000
           }
         },
         includedTypes: includedTypes,
         languageCode: "fr"      });
 
       if (autocompleteResults?.suggestions && autocompleteResults.suggestions.length > 0) {
-        // Extraire les textes des suggestions
         const suggestionTexts = autocompleteResults.suggestions
           .map((suggestion: any) => {
-            // Prioriser le texte principal (displayName)
             if (suggestion.placePrediction?.text?.text) {
               return suggestion.placePrediction.text.text;
             }
-            // Fallback sur structuredFormat si disponible
             if (suggestion.placePrediction?.structuredFormat?.mainText?.text) {
               return suggestion.placePrediction.structuredFormat.mainText.text;
             }
             return null;
           })
-          .filter(Boolean) // Supprimer les valeurs null
-          .slice(0, 5); // Limiter à 5 suggestions
+          .filter(Boolean)
+          .slice(0, 5);
 
         setSuggestions(suggestionTexts);
         setShowSuggestions(suggestionTexts.length > 0);
       } else {
-        // Si pas de résultats de l'API, suggestions vides
         setSuggestions([]);
         setShowSuggestions(false);
       }
     } catch (error) {
       console.error("Erreur autocomplétion Google Places:", error);
       
-      // En cas d'erreur, utiliser un fallback simple basé sur les filtres
       const fallbackSuggestions = getFallbackSuggestions(value);
       setSuggestions(fallbackSuggestions);
       setShowSuggestions(fallbackSuggestions.length > 0);
@@ -144,7 +125,6 @@ const handleQueryChange = async (value: string) => {
   }
 };
 
-// Fonction de fallback en cas d'erreur API
 const getFallbackSuggestions = (value: string): string[] => {
   const fallbackData: { [key: string]: string[] } = {
     restaurant: [
@@ -164,18 +144,15 @@ const getFallbackSuggestions = (value: string): string[] => {
   let relevantSuggestions: string[] = [];
 
   if (selectedTypes.length > 0) {
-    // Utiliser les suggestions basées sur les filtres sélectionnés
-    selectedTypes.forEach(type => {
+      selectedTypes.forEach(type => {
       if (fallbackData[type]) {
         relevantSuggestions.push(...fallbackData[type]);
       }
     });
   } else {
-    // Si aucun filtre, utiliser toutes les suggestions
     relevantSuggestions = Object.values(fallbackData).flat();
   }
 
-  // Filtrer par le texte saisi et limiter à 5
   return relevantSuggestions
     .filter(suggestion => 
       suggestion.toLowerCase().includes(value.toLowerCase())
@@ -183,17 +160,13 @@ const getFallbackSuggestions = (value: string): string[] => {
     .slice(0, 5);
 };
 
-  // Sélectionner une suggestion
   const selectSuggestion = (suggestion: string) => {
     setQuery(suggestion);
     setShowSuggestions(false);
     setSuggestions([]);
     setSelectedSuggestionIndex(-1);
-    // Optionnel : lancer automatiquement la recherche
-    // performSearch(suggestion, 'manual');
   };
 
-  // Gestion des touches clavier pour les suggestions
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions || suggestions.length === 0) return;
 
@@ -223,7 +196,6 @@ const getFallbackSuggestions = (value: string): string[] => {
     }
   };
 
-  // Fermer les suggestions si on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
@@ -238,21 +210,19 @@ const getFallbackSuggestions = (value: string): string[] => {
     };
   }, []);
 
-  // Fonction pour calculer le nombre max de résultats selon les filtres
   const getMaxResults = () => {
     const selectedCount = selectedTypes.length;
-    if (selectedCount === 0) return 20; // Tous types, demander plus
-    if (selectedCount === 1) return 8; // 1 type, bon nombre
-    if (selectedCount === 2) return 12; // 2 types, 6 par type
-    return 15; // 3 types, 5 par type
+    if (selectedCount === 0) return 20;
+    if (selectedCount === 1) return 8;
+    if (selectedCount === 2) return 12;
+    return 15;
   };
 
   const loadPopularPlaces = async () => {
     setLoading(true);
     try {
-      const maxResults = 20; // Demander plus de lieux populaires pour avoir de la variété
+      const maxResults = 20;
       
-      // Recherche de lieux populaires en Égypte avec tous les types
       const results = await service.searchText({
         textQuery: "popular places restaurants hotels tourist attractions museums Egypt Cairo Alexandria Luxor",
         languageCode: "fr",
@@ -265,7 +235,6 @@ const getFallbackSuggestions = (value: string): string[] => {
         setPlaces(results.places);
         applyFilters(results.places, selectedTypes);
       } else {
-        // Fallback avec searchNearby si searchText ne donne rien
         const nearbyResults = await service.searchNearby({
           locationRestriction: {
             circle: {
@@ -291,7 +260,6 @@ const getFallbackSuggestions = (value: string): string[] => {
     }
   };
 
-  // Fonction de recherche unifiée
   const performSearch = async (searchQuery: string, source: 'manual' | 'chatbot' = 'manual') => {
     if (!searchQuery.trim()) return;
 
@@ -301,10 +269,8 @@ const getFallbackSuggestions = (value: string): string[] => {
     try {
       const maxResults = getMaxResults();
       
-      // Construire la requête en fonction des filtres sélectionnés
       let enhancedQuery = searchQuery;
       
-      // Si des filtres sont sélectionnés, on enrichit la requête
       if (selectedTypes.length > 0) {
         const typeLabels = selectedTypes.map(type => {
           if (type === 'restaurant') return 'restaurants';
@@ -316,7 +282,6 @@ const getFallbackSuggestions = (value: string): string[] => {
         enhancedQuery = `${typeLabels} ${searchQuery}`;
         console.log('🔍 Requête enrichie avec filtres sélectionnés:', enhancedQuery);
       } else {
-        // Aucun filtre sélectionné = recherche tous types de lieux
         console.log('🔍 Recherche tous types (aucun filtre sélectionné):', enhancedQuery);
       }
       
@@ -331,7 +296,6 @@ const getFallbackSuggestions = (value: string): string[] => {
         setPlaces(newPlaces);
         applyFilters(newPlaces);
         
-        // Si la recherche vient du chatbot, faire défiler vers les résultats
         if (source === 'chatbot') {
           setTimeout(() => {
             const resultsSection = document.getElementById('search-results');
@@ -341,7 +305,6 @@ const getFallbackSuggestions = (value: string): string[] => {
           }, 500);
         }
       } else {
-        // Aucun résultat trouvé
         setPlaces([]);
         setFilteredPlaces([]);
       }
@@ -376,24 +339,19 @@ const getFallbackSuggestions = (value: string): string[] => {
     
     setSelectedTypes(newSelectedTypes);
     
-    // Si on a une requête de recherche active, relancer la recherche avec les nouveaux filtres
     if (query.trim()) {
       console.log('🔄 Relance de la recherche avec nouveaux filtres:', newSelectedTypes);
       
-      // Utiliser les nouveaux filtres pour la recherche
       await performSearchWithTypes(query, newSelectedTypes, searchSource);
     } else {
-      // Sinon, juste filtrer les résultats actuels (lieux populaires)
       applyFilters(places, newSelectedTypes);
     }
   };
 
 
   const handlePlaceClick = async (place: any) => {
-    // D'abord naviguer vers la page de détails
     router.push(`/places/${place.placeId}`);
     
-    // Puis enregistrer la visite (seulement si l'utilisateur est connecté)
     if (session?.user?.id) {
       try {
         await fetch('/api/visits', {
@@ -410,11 +368,9 @@ const getFallbackSuggestions = (value: string): string[] => {
         console.log('✅ Visite enregistrée:', place.name || place.displayName?.text);
       } catch (error) {
         console.error('❌ Erreur enregistrement visite:', error);
-        // On ne fait pas planter l'app si l'enregistrement échoue
       }
     }
   };
-  // Nouvelle fonction pour rechercher avec des types spécifiques
   const performSearchWithTypes = async (searchQuery: string, types: string[], source: 'manual' | 'chatbot' = 'manual') => {
     if (!searchQuery.trim()) return;
 
@@ -424,10 +380,8 @@ const getFallbackSuggestions = (value: string): string[] => {
     try {
       const maxResults = getMaxResults();
       
-      // Construire la requête en fonction des types fournis
       let enhancedQuery = searchQuery;
       
-      // Si des types sont fournis, on enrichit la requête
       if (types.length > 0) {
         const typeLabels = types.map(type => {
           if (type === 'restaurant') return 'restaurants';
@@ -439,7 +393,6 @@ const getFallbackSuggestions = (value: string): string[] => {
         enhancedQuery = `${typeLabels} ${searchQuery}`;
         console.log('🔍 Requête avec types spécifiés:', enhancedQuery, 'Types:', types);
       } else {
-        // Aucun type spécifié = recherche TOUS types de lieux
         enhancedQuery = `restaurants hotels tourist attractions museums parks ${searchQuery}`;
         console.log('🔍 Recherche TOUS types:', enhancedQuery);
       }
@@ -447,7 +400,7 @@ const getFallbackSuggestions = (value: string): string[] => {
       const results = await service.searchText({
         textQuery: `${enhancedQuery} Égypte`,
         languageCode: "fr",
-        maxResultCount: Math.max(20, types.length * 5), // Plus de résultats pour avoir de la variété
+        maxResultCount: Math.max(20, types.length * 5),
       });
 
       if (results.places && results.places.length > 0) {
@@ -458,7 +411,6 @@ const getFallbackSuggestions = (value: string): string[] => {
         setPlaces(newPlaces);
         applyFilters(newPlaces, types);
         
-        // Si la recherche vient du chatbot, faire défiler vers les résultats
         if (source === 'chatbot') {
           setTimeout(() => {
             const resultsSection = document.getElementById('search-results');
@@ -469,7 +421,6 @@ const getFallbackSuggestions = (value: string): string[] => {
         }
       } else {
         console.log('❌ Aucun résultat trouvé');
-        // Aucun résultat trouvé
         setPlaces([]);
         setFilteredPlaces([]);
       }
@@ -481,29 +432,23 @@ const getFallbackSuggestions = (value: string): string[] => {
   };
 
   const handleMarkerClick = (place: PlaceResult) => {
-    // Optionnel : comportement lors du clic sur un marqueur
     console.log("Marqueur cliqué :", place.displayName?.text);
   };
 
   const handleChatbotRecommendation = (recommendations: any) => {
-    // Optionnel : Mise à jour de la recherche basée sur les recommandations du chatbot
     console.log('Recommandations du chatbot:', recommendations);
   };
 
-  // NOUVELLE FONCTION : Gestion des mises à jour de recherche depuis le chatbot
   const handleChatbotSearchUpdate = (searchTerm: string) => {
     console.log('🤖 Chatbot a suggéré une recherche:', searchTerm);
     
-    // Mettre à jour seulement la barre de recherche principale (pas de recherche automatique)
     setQuery(searchTerm);
     setSearchSource('chatbot');
     
-    // Fermer les suggestions d'autocomplétion
     setShowSuggestions(false);
     setSuggestions([]);
     setSelectedSuggestionIndex(-1);
     
-    // Pas de recherche automatique - l'utilisateur doit cliquer sur "Rechercher"
   };
 
   const getTypeLabel = (type: string) => {
@@ -518,7 +463,6 @@ const getFallbackSuggestions = (value: string): string[] => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="container mx-auto px-4 py-8">
-        {/* En-tête avec recherche */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Découvrez l'Égypte 🐪🏺
@@ -527,7 +471,6 @@ const getFallbackSuggestions = (value: string): string[] => {
             Restaurants 🍽️, Hôtels 🏨 et Attractions Touristiques 🏛️
           </p>
 
-          {/* Barre de recherche avec effet chatbot */}
           <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-6">
             <div className="search-container relative">
               <div className="flex gap-2">
@@ -565,7 +508,6 @@ const getFallbackSuggestions = (value: string): string[] => {
                 </Button>
               </div>
 
-              {/* Suggestions d'autocomplétion */}
               {showSuggestions && (
                 <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 border-l border-r border-b border-gray-300 dark:border-gray-600 rounded-b-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                   {isLoadingSuggestions ? (
@@ -592,7 +534,6 @@ const getFallbackSuggestions = (value: string): string[] => {
                               : 'text-gray-400'
                           }`} />
                           <span>{suggestion}</span>
-                          {/* Indicateur Google Places */}
                           <span className="ml-auto text-xs text-green-600 dark:text-green-400">
                             🌍 Places API
                           </span>
@@ -623,7 +564,7 @@ const getFallbackSuggestions = (value: string): string[] => {
                   )}
                 </div>
               )}
-            </div> {/* 👈 FERMETURE de search-container */}
+            </div>
 
             {searchSource === 'chatbot' && (
               <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 flex items-center justify-center gap-1 animate-fade-in">
@@ -638,9 +579,7 @@ const getFallbackSuggestions = (value: string): string[] => {
             )}
           </form>
 
-          {/* Filtres et contrôles d'affichage */}
           <div className="flex flex-wrap justify-center gap-4 mb-6">
-            {/* Filtres par type */}
             <div className="flex gap-2">
               <span className="flex items-center text-gray-600 dark:text-gray-400">
                 <Filter className="h-4 w-4 mr-1" />
@@ -668,7 +607,6 @@ const getFallbackSuggestions = (value: string): string[] => {
               )}
             </div>
 
-            {/* Bouton carte/grille */}
             <Button
               variant="outline"
               onClick={() => setShowMap(!showMap)}
@@ -689,7 +627,6 @@ const getFallbackSuggestions = (value: string): string[] => {
           </div>
         </div>
 
-        {/* Affichage conditionnel : Carte ou Grille */}
         {showMap ? (
           <div className="mb-8">
             <GoogleMapRender
@@ -712,7 +649,6 @@ const getFallbackSuggestions = (value: string): string[] => {
           </div>
         ) : null}
 
-                  {/* Grille des résultats */}
         <div className="mb-8" id="search-results">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
@@ -740,7 +676,7 @@ const getFallbackSuggestions = (value: string): string[] => {
                 <CustomCard 
                   key={`${place.placeId}-${index}`} 
                   place={place}
-                  onClick={() => handlePlaceClick(place)}  // 👈 CHANGEMENT ICI
+                  onClick={() => handlePlaceClick(place)}
                 />
               ))}
             </div>
@@ -759,15 +695,13 @@ const getFallbackSuggestions = (value: string): string[] => {
             </div>
           )}
         </div>
-        {/* 🎯 AJOUTER ICI LE BLOC VISITHISTORY - JUSTE APRÈS LA SECTION RÉSULTATS */}
         {session?.user && (
           <div className="mb-8">
             <VisitHistory />
           </div>
         )}
 
-      </div>  {/* 👈 Cette div ferme probablement le container principal */}   
-      {/* Chatbot de recommandations avec intégration */}
+      </div>   
       <TravelChatbot 
         onRecommendation={handleChatbotRecommendation}
         onSearchUpdate={handleChatbotSearchUpdate}

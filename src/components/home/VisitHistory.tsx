@@ -1,4 +1,3 @@
-// src/components/home/VisitHistory.tsx - VERSION SANS AUTO-REFRESH
 "use client";
 
 import { useEffect, useState } from "react";
@@ -33,18 +32,10 @@ export function VisitHistory() {
     }
   };
 
-  // 🎯 CHANGEMENT : Charger seulement au montage du composant
   useEffect(() => {
     fetchVisits();
   }, [session]);
 
-  // 🎯 SUPPRIMÉ : L'interval qui rechargeait toutes les 5 secondes
-  // useEffect(() => {
-  //   if (session?.user) {
-  //     const interval = setInterval(fetchVisits, 5000);
-  //     return () => clearInterval(interval);
-  //   }
-  // }, [session]);
 
   if (!session?.user || loading) {
     return null;

@@ -1,4 +1,3 @@
-//[placeid]/pages.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -71,14 +70,11 @@ export default function Page({ params }: { params: { placeId: string } }) {
 
   const fetchReviews = async () => {
     try {
-      // ← appelle ta nouvelle API consolidée
       const res = await fetch(`/api/reviews/${placeId}?external=google`);
       const data = await res.json();
       
-      // Vérifier la structure de la réponse
       const { internal = [], google = [] } = data;
   
-      // ① Avis internes : on garde la forme actuelle
       const transformedInternal: ReviewUI[] = internal.map((r: any) => ({
         id: r.id,
         rating: r.rating,
@@ -92,9 +88,8 @@ export default function Page({ params }: { params: { placeId: string } }) {
         source: "internal" as const,
       }));
   
-      // ② Avis Google : on les convertit pour la même UI
       const transformedGoogle: ReviewUI[] = google.map((g: any, index: number) => ({
-        id: `google-${g.time || index}`,      // un id pseudo-unique
+        id: `google-${g.time || index}`,
         rating: g.rating,
         comment: g.text,
         user: {
@@ -107,11 +102,10 @@ export default function Page({ params }: { params: { placeId: string } }) {
         time: g.time,
       }));
   
-      // Combiner : Google en premier (plus "officiels"), puis internes
       setReviews([...transformedGoogle, ...transformedInternal]);
     } catch (err) {
       console.error("Erreur lors de la récupération des avis :", err);
-      setReviews([]); // Réinitialiser en cas d'erreur
+      setReviews([]);
     }
   };
   
@@ -231,7 +225,6 @@ export default function Page({ params }: { params: { placeId: string } }) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="flex flex-col items-center pt-12 pb-8 space-y-6 px-4">
-        {/* Détails du lieu */}
         <div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
           <h2 className="text-3xl font-bold mb-6 text-center text-gray-900 dark:text-white">
             {placeDetails.displayName.text}
@@ -283,7 +276,6 @@ export default function Page({ params }: { params: { placeId: string } }) {
           </div>
         </div>
 
-{/* Section des avis */}
 <div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
   <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Avis</h3>
   {reviews.length === 0 ? (
@@ -306,7 +298,6 @@ export default function Page({ params }: { params: { placeId: string } }) {
               <p className="font-bold text-gray-900 dark:text-white">
                 {review.user.firstname} {review.user.lastname}
               </p>
-              {/* Badge pour distinguer les sources */}
               {review.source === "google" ? (
                 <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full font-medium">
                   Google
@@ -325,14 +316,12 @@ export default function Page({ params }: { params: { placeId: string } }) {
             </p>
             <p className="text-gray-700 dark:text-gray-300 mt-1">{review.comment}</p>
 
-            {/* Afficher la date pour les avis Google */}
             {review.source === "google" && review.relative_time_description && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {review.relative_time_description}
               </p>
             )}
 
-            {/* Bouton modifier seulement pour les avis internes de l'utilisateur actuel */}
             {review.source === "internal" && currentUser?.id === review.userId && (
               <Button
                 onClick={() => handleEditReview(review)}
@@ -349,7 +338,6 @@ export default function Page({ params }: { params: { placeId: string } }) {
   )}
 </div>
 
-        {/* Formulaire d'ajout d'avis */}
         <div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
           <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
             {editingReviewId ? "Modifier votre avis" : "Ajouter un avis"}

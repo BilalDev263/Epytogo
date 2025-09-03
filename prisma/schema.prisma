@@ -8,17 +8,16 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  firstname     String?   // Optionnel pour Google Auth
-  lastname      String?   // Optionnel pour Google Auth
-  email         String    @unique
-  password      String?   // Optionnel pour Google Auth
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  reviews       Review[]
-  visits        Visit[]
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  firstname String?
+  lastname  String?
+  email     String    @unique
+  password  String?
+  image     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  reviews   Review[]
+  visits    Visit[]
 }
 
 model Review {

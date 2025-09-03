@@ -10,17 +10,14 @@ export async function updateEmailAction({ userId, email }: UpdateEmailPayload) {
   if (!validateEmail(email)) throw new Error("Format d'email invalide");
 
   try {
-    // Vérifie si l'utilisateur existe
     const userExists = await findOneUser({ id: userId });
 
     if (!userExists) throw new Error("Utilisateur non trouvé");
 
-    // Met à jour l'email de l'utilisateur
     const userUpdated = await updateUser(userId, { email });
 
     if (!userUpdated) throw new Error("Échec de la mise à jour de l'email");
 
-    // Supprime le mot de passe de l'objet utilisateur avant de le retourner
     const { password, ...userWithoutPassword } = userUpdated;
     return userWithoutPassword;
   } catch (error) {

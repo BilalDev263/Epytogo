@@ -1,4 +1,3 @@
-// src/services/GeminiGoogleService.ts
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -80,7 +79,6 @@ Tu peux inventer des noms réalistes si tu ne te souviens pas exactement, l'impo
     try {
       console.log('🔍 Envoi à Gemini API (mode recommandations directes)...');
       
-      // Appel direct à Gemini pour des recommandations complètes
       const geminiResponse = await this.callGeminiAPI(messages);
       
       if (geminiResponse) {
@@ -88,13 +86,12 @@ Tu peux inventer des noms réalistes si tu ne te souviens pas exactement, l'impo
 
         return {
           message: geminiResponse,
-          searchParams: undefined, // Plus besoin de paramètres de recherche
-          recommendations: null, // Plus besoin d'API externe
+          searchParams: undefined,
+          recommendations: null,
           dynamicTitles: null
         };
       }
       
-      // Fallback si Gemini ne répond pas
       return {
         message: "🏺 Les vents du désert perturbent ma connexion ! Pouvez-vous répéter votre demande ?",
         searchParams: undefined,
@@ -130,7 +127,7 @@ Tu peux inventer des noms réalistes si tu ne te souviens pas exactement, l'impo
           generationConfig: {
             temperature: 0.7,
             topP: 0.9,
-            maxOutputTokens: 1000 // Plus de tokens pour des recommandations détaillées
+            maxOutputTokens: 1000
           }
         })
       });

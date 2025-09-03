@@ -1,8 +1,6 @@
-// src/utils/placeAdapter.ts
 import { PlaceResult } from "@/services/ServiceInterface";
 import { PlacesImageService } from "@/services/PlacesImageService";
 
-// Interface attendue par CustomCard
 export interface CustomCardPlace {
   placeId: string;
   name: string;
@@ -13,7 +11,6 @@ export interface CustomCardPlace {
   isOpen?: boolean;
 }
 
-// Fonction pour convertir PlaceResult en CustomCardPlace
 export function adaptPlaceForCard(place: PlaceResult): CustomCardPlace {
   return {
     placeId: place.id || '',
@@ -26,7 +23,6 @@ export function adaptPlaceForCard(place: PlaceResult): CustomCardPlace {
   };
 }
 
-// Fonction pour convertir un tableau de PlaceResult
 export function adaptPlacesForCards(places: PlaceResult[]): CustomCardPlace[] {
   return places.map(adaptPlaceForCard);
 }

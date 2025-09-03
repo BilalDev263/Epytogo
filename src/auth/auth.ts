@@ -1,4 +1,3 @@
-// src/auth/auth.ts
 import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
@@ -16,32 +15,21 @@ const credentials = {
   },
 };
 
-// Fonction pour authentifier un utilisateur avec les identifiants fournis.
 const authenticate = async (
   credentials: Record<"email" | "password", string>,
 ) => {
   const user = await findOneUser({ email: credentials.email });
 
-  // Vérifie si l'utilisateur existe.
   if (!user) throw new Error("Nom d'utilisateur ou mot de passe incorrect");
 
-  // Vérifie si l'utilisateur a un mot de passe (pas Google Auth)
   if (!user.password) throw new Error("Utilisez Google pour vous connecter");
 
   const isPasswordCorrect = await compare(credentials.password, user.password);
 
-  // Vérifie si le mot de passe est correct.
   if (!isPasswordCorrect)
     throw new Error("Nom d'utilisateur ou mot de passe incorrect");
 
-  // Vérifie si l'email a été vérifié (seulement pour les comptes classiques).
-  if (!user.emailVerified && user.password) {
-    throw new Error(
-      "Votre compte n'est pas encore activé. Veuillez vérifier votre boîte mail pour activer votre compte.",
-    );
-  }
 
-  // Retourner l'utilisateur sans le mot de passe, en gérant les valeurs null
   const { password, ...userWithoutPassword } = user;
   return {
     ...userWithoutPassword,
@@ -50,30 +38,24 @@ const authenticate = async (
   };
 };
 
-// Configuration des options d'authentification pour NextAuth.
 export const authOptions: AuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/auth/login",
   },
   session: {
     strategy: "jwt",
   },
-  jwt: {
-    secret: process.env.NEXTAUTH_SECRET,
-  },
   providers: [
-    // Provider Google
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
     
-    // Provider existant
     CredentialsProvider({
       name: "Identifiants",
       credentials,
       async authorize(credentials) {
-        // Vérifie que les identifiants sont fournis.
         if (!credentials?.email || !credentials.password) {
           throw new Error("L'email et le mot de passe sont requis");
         }
@@ -86,30 +68,24 @@ export const authOptions: AuthOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
         try {
-          // Vérifier si l'utilisateur existe déjà
           const existingUser = await prisma.user.findUnique({
             where: { email: user.email! }
           });
 
           if (existingUser) {
-            // Utilisateur existe, on met à jour ses infos si nécessaire
             await prisma.user.update({
               where: { email: user.email! },
               data: {
                 image: user.image,
-                emailVerified: new Date(), // Marquer comme vérifié
               }
             });
           } else {
-            // Créer un nouvel utilisateur
             await prisma.user.create({
               data: {
                 email: user.email!,
                 firstname: user.name?.split(' ')[0] || '',
                 lastname: user.name?.split(' ').slice(1).join(' ') || '',
                 image: user.image,
-                emailVerified: new Date(),
-                // password est optionnel, donc on ne le met pas
               }
             });
           }
@@ -123,7 +99,6 @@ export const authOptions: AuthOptions = {
     },
     async jwt({ token, user, account }) {
       if (account?.provider === "google") {
-        // Pour les utilisateurs Google, récupérer les infos de la DB
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email! }
         });
@@ -135,7 +110,6 @@ export const authOptions: AuthOptions = {
           };
         }
       } else if (user) {
-        // Pour les utilisateurs classiques
         token.user = user as any;
       }
       return token;

@@ -1,4 +1,3 @@
-// src/providers/Providers.tsx - Avec ThemeProvider (Version corrigée)
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -12,10 +11,8 @@ export const Providers = ({ children }: Readonly<React.PropsWithChildren>) => {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Éviter de refetch immédiatement
-            staleTime: 1000 * 60 * 5, // 5 minutes
-            // gcTime remplace cacheTime dans TanStack Query v4+
-            gcTime: 1000 * 60 * 10, // 10 minutes
+            staleTime: 1000 * 60 * 5,
+            gcTime: 1000 * 60 * 10,
           },
         },
       })

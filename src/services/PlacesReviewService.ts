@@ -1,6 +1,4 @@
-// src/services/PlacesReviewService.ts
 
-// Interface pour les avis Google (différente de Prisma Review)
 export interface GoogleReview {
     author_name: string;
     author_url?: string;
@@ -39,6 +37,5 @@ export interface GoogleReview {
       throw new Error(payload.error_message ?? `Google Places API error: ${payload.status}`);
     }
   
-    // Retourne max 5 avis (limite imposée par Google)
     return payload.result?.reviews ?? [];
   }

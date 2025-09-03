@@ -31,7 +31,7 @@ export const createUser = async (
 
     return newUser;
   } catch (error) {
-    console.error("Erreur Prisma dans createUser:", error); // 👈 AJOUT ESSENTIEL
+    console.error("Erreur Prisma dans createUser:", error);
     return null;
   }
 };

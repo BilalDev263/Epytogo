@@ -1,15 +1,12 @@
-// src/components/GoogleMap.tsx
 "use client";
 
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 import { useEffect, useRef, useState } from "react";
 import { PlaceResult } from "@/services/ServiceInterface";
 
-// Types Google Maps (installer @types/google.maps pour de meilleurs types)
-type GoogleMap = any; // google.maps.Map si types installés
-type GoogleMaps = any; // typeof google.maps si types installés
+type GoogleMap = any;
+type GoogleMaps = any;
 
-// Coordonnées de l'Égypte (centre approximatif)
 const EGYPT_CENTER = {
   lat: 26.8206,
   lng: 30.8025
@@ -26,16 +23,13 @@ interface MapComponentProps extends GoogleMapProps {
   maps: GoogleMaps;
 }
 
-// Composant Map interne
 function MapComponent({ map, maps, places, onMarkerClick }: MapComponentProps) {
   const markersRef = useRef<google.maps.Marker[]>([]);
 
   useEffect(() => {
-    // Supprimer les anciens marqueurs
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
-    // Ajouter les nouveaux marqueurs
     places.forEach((place) => {
       if (place.location) {
         const marker = new maps.Marker({
@@ -46,7 +40,6 @@ function MapComponent({ map, maps, places, onMarkerClick }: MapComponentProps) {
           map,
           title: place.displayName?.text || "Lieu"});
 
-        // InfoWindow pour afficher les détails
         const infoWindow = new maps.InfoWindow({
           content: `
             <div class="p-3 max-w-xs">
@@ -74,7 +67,6 @@ function MapComponent({ map, maps, places, onMarkerClick }: MapComponentProps) {
       }
     });
 
-    // Ajuster la vue pour inclure tous les marqueurs
     if (places.length > 0 && markersRef.current.length > 0) {
       const bounds = new maps.LatLngBounds();
       markersRef.current.forEach(marker => {
@@ -85,7 +77,6 @@ function MapComponent({ map, maps, places, onMarkerClick }: MapComponentProps) {
       });
       map.fitBounds(bounds);
       
-      // Éviter un zoom trop important
       const listener = maps.event.addListener(map, "idle", () => {
         if (map.getZoom()! > 15) map.setZoom(15);
         maps.event.removeListener(listener);
@@ -96,7 +87,6 @@ function MapComponent({ map, maps, places, onMarkerClick }: MapComponentProps) {
   return null;
 }
 
-// Hook pour initialiser la carte
 function useMap(ref: React.RefObject<HTMLDivElement>) {
   const [map, setMap] = useState<GoogleMap>();
 
@@ -126,7 +116,6 @@ function useMap(ref: React.RefObject<HTMLDivElement>) {
   return map;
 }
 
-// Composant principal de la carte
 function Map({ places, onMarkerClick, className }: GoogleMapProps) {
   const ref = useRef<HTMLDivElement>(null);
   const map = useMap(ref);
@@ -146,14 +135,12 @@ function Map({ places, onMarkerClick, className }: GoogleMapProps) {
   );
 }
 
-// Fonction globale pour gérer les clics sur "Voir les détails"
 if (typeof window !== "undefined") {
   (window as any).viewPlaceDetails = (placeId: string) => {
     window.open(`/places/${placeId}`, '_blank');
   };
 }
 
-// Composant de rendu avec gestion des erreurs
 function GoogleMapRender(props: GoogleMapProps) {
   const render = (status: Status) => {
     switch (status) {

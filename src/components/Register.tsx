@@ -1,4 +1,3 @@
-// src/components/Register.tsx
 "use client";
 import React, { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -59,10 +58,8 @@ export const Register = ({ className }: { className?: string }) => {
           Inscrivez-vous
         </Title>
 
-        {/* Bouton Google */}
         <GoogleAuthButton isLoading={isSubmitting} />
 
-        {/* Séparateur */}
         <div className="relative w-full">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300 dark:border-gray-600" />

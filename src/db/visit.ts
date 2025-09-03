@@ -1,7 +1,5 @@
-// src/db/visit.ts - VERSION SIMPLE
 import db from "./prisma";
 
-// Enregistrer une visite (remplace si existe déjà)
 export async function recordVisit(userId: string, placeId: string, placeName: string) {
   try {
     await db.visit.upsert({
@@ -23,7 +21,6 @@ export async function recordVisit(userId: string, placeId: string, placeName: st
   }
 }
 
-// Récupérer les 5 dernières visites
 export async function getLastVisits(userId: string) {
   try {
     return await db.visit.findMany({

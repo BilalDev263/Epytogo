@@ -12,7 +12,7 @@ interface Message {
 interface ChatbotProps {
   onRecommendation?: (recommendations: any) => void;
   onPlaceClick?: (placeId: string, placeType: 'hotel' | 'restaurant' | 'attraction') => void;
-  onSearchUpdate?: (searchTerm: string) => void; // Nouveau prop pour synchroniser avec la barre de recherche
+  onSearchUpdate?: (searchTerm: string) => void;
 }
 
 const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick, onSearchUpdate }) => {
@@ -30,7 +30,6 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Lieux égyptiens populaires pour l'extraction
   const egyptianPlaces = [
     'le caire', 'cairo', 'caire',
     'alexandrie', 'alexandria', 
@@ -50,11 +49,9 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
     scrollToBottom();
   }, [messages]);
 
-  // Fonction pour extraire les termes de recherche pertinents
   const extractSearchTerms = (userMessage: string, botMessage: string): string | null => {
     const fullText = `${userMessage} ${botMessage}`.toLowerCase();
     
-    // 1. Chercher des villes égyptiennes mentionnées
     for (const place of egyptianPlaces) {
       if (fullText.includes(place)) {
         console.log('🎯 Ville détectée:', place);
@@ -62,21 +59,17 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
       }
     }
     
-    // 2. Chercher des noms d'établissements spécifiques dans la réponse du bot
     const establishmentPattern = /\*\*(.*?)\*\*/g;
     const matches = botMessage.match(establishmentPattern);
     if (matches && matches.length > 0) {
-      // Prendre le premier établissement mentionné
       const establishment = matches[0].replace(/\*\*/g, '');
       console.log('🏨 Établissement détecté:', establishment);
       return establishment;
     }
     
-    // 3. Extraire des mots-clés génériques pour la recherche
     const keywords = ['hotel', 'restaurant', 'attraction', 'pyramide', 'temple'];
     for (const keyword of keywords) {
       if (fullText.includes(keyword)) {
-        // Combiner avec une ville si possible
         for (const place of egyptianPlaces) {
           if (fullText.includes(place)) {
             console.log('🔍 Combinaison détectée:', `${keyword} ${place}`);
@@ -91,22 +84,19 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
     return null;
   };
 
-  // Fonction pour vérifier si la demande concerne l'Égypte - Version minimaliste
   const isEgyptRelated = (message: string): boolean => {
     const basicEgyptKeywords = [
       'egypt', 'égypte', 'pyramide', 'pharaon', 'nil', 'caire', 'alexandrie', 'luxor', 'assouan'
     ];
     
-    // Accepter les messages qui contiennent des mots-clés de base OU sont assez longs pour contenir des noms de lieux
     return basicEgyptKeywords.some(keyword => 
       message.toLowerCase().includes(keyword)
-    ) || message.length > 15; // Donner une chance aux messages longs d'être analysés
+    ) || message.length > 15;
   };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
-    // Vérification préalable si la demande concerne l'Égypte
     if (!isEgyptRelated(inputMessage)) {
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -142,13 +132,11 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
     ];
     setConversationHistory(newConversationHistory);
     
-    // Sauvegarder le message utilisateur pour l'extraction
     const currentUserMessage = inputMessage;
     setInputMessage('');
     setIsTyping(true);
 
     try {
-      // Appel simplifié à Gemini qui fait tout le travail
       const aiResponse = await GeminiGoogleService.sendMessage(newConversationHistory);
       
       console.log('🤖 Réponse GeminiService:', {
@@ -161,18 +149,15 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
         { role: 'assistant' as const, content: aiResponse.message }
       ]);
 
-      // Extraire les termes de recherche du message utilisateur et de la réponse bot
       const searchTerm = extractSearchTerms(currentUserMessage, aiResponse.message);
       
       if (searchTerm && onSearchUpdate) {
         console.log('🎯 Mise à jour de la recherche avec:', searchTerm);
-        // Petite pause pour que l'utilisateur voie la réponse du bot avant la recherche
         setTimeout(() => {
           onSearchUpdate(searchTerm);
         }, 1500);
       }
 
-      // Gemini fait tout maintenant, on affiche directement sa réponse
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
@@ -182,7 +167,6 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
 
       setMessages(prev => [...prev, botResponse]);
 
-      // Appeler le callback de recommandation si fourni
       if (onRecommendation && aiResponse.recommendations) {
         onRecommendation(aiResponse.recommendations);
       }
@@ -212,7 +196,6 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
-      {/* Bouton flottant avec pyramide */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
@@ -226,15 +209,12 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
             <path d="M12 2L2 22h20L12 2zm0 3.84L19.16 20H4.84L12 5.84z"/>
             <path d="M12 5.84L16.58 18H7.42L12 5.84z" opacity="0.7"/>
           </svg>
-          {/* Badge indiquant la synchronisation */}
           <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
         </button>
       )}
 
-      {/* Interface de chat */}
       {isOpen && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-96 h-[600px] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden">
-          {/* En-tête */}
           <div className="bg-gradient-to-r from-yellow-600 via-yellow-700 to-amber-800 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-black/30 rounded-full flex items-center justify-center border border-yellow-400">
@@ -258,7 +238,6 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
             </button>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
             {messages.map((message) => (
               <div
@@ -284,7 +263,6 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
               </div>
             ))}
 
-            {/* Indicateur de frappe */}
             {isTyping && (
               <div className="flex justify-start">
                 <div className="bg-white dark:bg-gray-700 rounded-2xl rounded-bl-md shadow-md px-4 py-3 border-l-4 border-yellow-600">
@@ -301,7 +279,6 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Zone de saisie */}
           <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
             <div className="flex gap-2">
               <textarea
@@ -320,7 +297,6 @@ const TravelChatbot: React.FC<ChatbotProps> = ({ onRecommendation, onPlaceClick,
                 <Send className="h-4 w-4" />
               </button>
             </div>
-            {/* Indication de synchronisation */}
             <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 text-center flex items-center justify-center gap-1">
               <Sparkles className="h-3 w-3" />
               Mes recommandations alimentent la recherche automatiquement
