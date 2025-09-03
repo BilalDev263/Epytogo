@@ -9,6 +9,8 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PlacesImageService } from "@/services/PlacesImageService";
+import ReservationCalendar from "@/components/ReservationCalendar";
+import AdBanner from "@/components/ads/AdBanner";
 
 type ReviewUI = {
   id: string;                  
@@ -274,6 +276,26 @@ export default function Page({ params }: { params: { placeId: string } }) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Publicité spécifique aux lieux */}
+        <div className="w-full max-w-4xl">
+          <AdBanner position="PLACE_DETAILS" />
+        </div>
+
+        {/* Calendrier de réservation */}
+        <div className="w-full max-w-4xl">
+          <ReservationCalendar 
+            place={{
+              place_id: placeId,
+              name: placeDetails.displayName.text,
+              types: placeDetails.types || [],
+              opening_hours: placeDetails.currentOpeningHours
+            }}
+            onReservationSuccess={() => {
+              console.log('Réservation réussie !');
+            }}
+          />
         </div>
 
 <div className="w-full max-w-4xl p-8 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">

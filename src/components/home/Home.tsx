@@ -14,6 +14,7 @@ import { Search, Map, Grid, Filter, Sparkles } from "lucide-react";
 import { adaptPlacesForCards } from "@/utils/placeAdapter";
 import TravelChatbot from "../TravelChatbot";
 import { VisitHistory } from "./VisitHistory";
+import AdBanner from "@/components/ads/AdBanner";
 
 export function Home() {
   const [places, setPlaces] = useState<PlaceResult[]>([]);
@@ -160,14 +161,17 @@ const getFallbackSuggestions = (value: string): string[] => {
     .slice(0, 5);
 };
 
-  const selectSuggestion = (suggestion: string) => {
+  const selectSuggestion = async (suggestion: string) => {
     setQuery(suggestion);
     setShowSuggestions(false);
     setSuggestions([]);
     setSelectedSuggestionIndex(-1);
+    
+    // Déclencher la recherche automatiquement après sélection
+    await performSearch(suggestion, 'manual');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = async (e: React.KeyboardEvent) => {
     if (!showSuggestions || suggestions.length === 0) return;
 
     switch (e.key) {
@@ -186,7 +190,14 @@ const getFallbackSuggestions = (value: string): string[] => {
       case 'Enter':
         if (selectedSuggestionIndex >= 0) {
           e.preventDefault();
-          selectSuggestion(suggestions[selectedSuggestionIndex]);
+          await selectSuggestion(suggestions[selectedSuggestionIndex]);
+        } else {
+          // Si aucune suggestion n'est sélectionnée, faire une recherche avec le query actuel
+          if (query.trim()) {
+            e.preventDefault();
+            setShowSuggestions(false);
+            await performSearch(query, 'manual');
+          }
         }
         break;
       case 'Escape':
@@ -285,14 +296,37 @@ const getFallbackSuggestions = (value: string): string[] => {
         console.log('🔍 Recherche tous types (aucun filtre sélectionné):', enhancedQuery);
       }
       
-      const results = await service.searchText({
-        textQuery: `${enhancedQuery} Égypte`,
+      const finalQuery = `${enhancedQuery} Égypte`;
+      console.log('🚀 Lancement recherche avec query:', finalQuery);
+      console.log('📊 Paramètres de recherche:', { 
+        textQuery: finalQuery, 
+        languageCode: "fr", 
+        maxResultCount: maxResults 
+      });
+
+      // Essayer d'abord sans "Égypte" pour voir si on obtient des résultats
+      let results = await service.searchText({
+        textQuery: enhancedQuery,
         languageCode: "fr",
         maxResultCount: maxResults,
       });
 
-      if (results.places && results.places.length > 0) {
+      // Si pas de résultats, essayer avec "Égypte"
+      if (!results?.places || results.places.length === 0) {
+        console.log('🔄 Tentative avec "Égypte" ajouté...');
+        results = await service.searchText({
+          textQuery: finalQuery,
+          languageCode: "fr",
+          maxResultCount: maxResults,
+        });
+      }
+
+      console.log('📦 Résultats bruts reçus:', results);
+      console.log('📍 Nombre de lieux trouvés:', results?.places?.length || 0);
+
+      if (results?.places && results.places.length > 0) {
         const newPlaces = results.places;
+        console.log('✅ Places à afficher:', newPlaces.length);
         setPlaces(newPlaces);
         applyFilters(newPlaces);
         
@@ -305,11 +339,13 @@ const getFallbackSuggestions = (value: string): string[] => {
           }, 500);
         }
       } else {
+        console.log('❌ Aucun résultat trouvé pour:', finalQuery);
         setPlaces([]);
         setFilteredPlaces([]);
       }
     } catch (error) {
-      console.error("Erreur lors de la recherche :", error);
+      console.error("❌ Erreur lors de la recherche :", error);
+      console.error("❌ Détails de l'erreur:", error.message || 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
@@ -470,6 +506,11 @@ const getFallbackSuggestions = (value: string): string[] => {
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
             Restaurants 🍽️, Hôtels 🏨 et Attractions Touristiques 🏛️
           </p>
+
+          {/* Bannière publicitaire header */}
+          <div className="mb-6">
+            <AdBanner position="HEADER_BANNER" className="mx-auto" />
+          </div>
 
           <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-6">
             <div className="search-container relative">
@@ -649,6 +690,11 @@ const getFallbackSuggestions = (value: string): string[] => {
           </div>
         ) : null}
 
+        {/* Pub avant les résultats */}
+        <div className="mb-8">
+          <AdBanner position="CONTENT_TOP" />
+        </div>
+
         <div className="mb-8" id="search-results">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
@@ -695,6 +741,12 @@ const getFallbackSuggestions = (value: string): string[] => {
             </div>
           )}
         </div>
+
+        {/* Pub après les résultats */}
+        <div className="mb-8">
+          <AdBanner position="CONTENT_BOTTOM" />
+        </div>
+
         {session?.user && (
           <div className="mb-8">
             <VisitHistory />

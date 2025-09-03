@@ -8,17 +8,17 @@ import UpdatePassword from "./form/profile/UpdatePassword";
 const Info = () => {
   const { currentUser } = useStore();
   return (
-    <ul className="flex flex-col gap-2 w-full border p-4 rounded-md">
-      <h2 className="font-bold">Mes information</h2>
+    <ul className="flex flex-col gap-2 w-full border border-gray-200 dark:border-gray-700 p-4 rounded-md bg-white dark:bg-gray-800">
+      <h2 className="font-bold text-gray-900 dark:text-white">Mes information</h2>
       <li className="flex items-center gap-1">
-        <h3 className="font-semibold">Utilisateur: </h3>
-        <p>{`
+        <h3 className="font-semibold text-gray-900 dark:text-white">Utilisateur: </h3>
+        <p className="text-gray-700 dark:text-gray-300">{`
         ${currentUser?.lastname}
         ${currentUser?.firstname}`}</p>
       </li>
       <li className="flex items-center gap-1">
-        <h3 className="font-semibold">Email: </h3>
-        <p>{currentUser?.email}</p>
+        <h3 className="font-semibold text-gray-900 dark:text-white">Email: </h3>
+        <p className="text-gray-700 dark:text-gray-300">{currentUser?.email}</p>
       </li>
     </ul>
   );
@@ -40,13 +40,13 @@ export const Profile = ({ trigger, onOpenChange }: Props) => {
       description={<Info />}
       onOpenChange={onOpenChange}
     >
-      <div className="border rounded-md p-4">
-        <div className="border-none shadow-none mb-4 text-sm text-muted-foreground">
-          <h2 className="font-bold mb-2">Modifier l email</h2>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-white dark:bg-gray-800">
+        <div className="border-none shadow-none mb-4">
+          <h2 className="font-bold mb-2 text-gray-900 dark:text-white">Modifier l email</h2>
           <UpdateEmail />
         </div>
-        <div className="border-none shadow-none mb-4 text-sm text-muted-foreground">
-          <h2 className="font-bold mb-2">Modifier le mot de passe</h2>
+        <div className="border-none shadow-none mb-4">
+          <h2 className="font-bold mb-2 text-gray-900 dark:text-white">Modifier le mot de passe</h2>
           <UpdatePassword />
         </div>
       </div>

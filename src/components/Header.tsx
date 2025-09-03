@@ -7,6 +7,7 @@ import { useNavigation } from "@/hooks/useNavigation";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
 export const Header = () => {
   const { navItemsHeader } = useNavigation();
@@ -15,7 +16,7 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 transition-all duration-300 shadow-sm">
       <Container className="flex h-20 items-center justify-between px-4 md:px-8">
-        <div className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3 group cursor-pointer">
           <div className="relative w-12 h-12 epytogo-gradient rounded-xl flex items-center justify-center group-hover:shadow-lg transition-all duration-300">
             <Image
               src="/logo.png"
@@ -26,10 +27,10 @@ export const Header = () => {
             />
           </div>
           <div className="flex flex-col">
-            <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">Epytogo</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">Epytogo</span>
             <span className="text-xs text-gray-600 dark:text-gray-500 hidden md:block">Découvrez l'Égypte</span>
           </div>
-        </div>
+        </Link>
 
         <nav className="hidden md:flex items-center gap-6">
           <Navigation navItems={navItemsHeader} />
