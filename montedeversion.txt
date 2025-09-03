@@ -1,0 +1,59 @@
+# Mont�e de version Next.js 14 vers Next.js 15
+
+## �tat initial
+- Next.js: 14.2.9
+- React: ^18
+- React-DOM: ^18
+- TypeScript: ^5
+- ESLint Config Next: 14.2.5
+
+## �tapes de migration
+
+### �tape 1: Pr�paration
+- [x] Cr�ation du fichier de suivi montedeversion.txt
+- [ ] V�rification des breaking changes Next.js 15
+- [ ] Backup du code actuel
+- [ ] Tests de l'application avant migration
+
+### �tape 2: Mise � jour des d�pendances principales
+- [x] Next.js: 14.2.9 → 15.0.3
+- [x] React: ^18 → 19.0.0
+- [x] React-DOM: ^18 → 19.0.0
+
+### �tape 3: Mise � jour des types et outils
+- [x] @types/react: ^18 → 19.0.2
+- [x] @types/react-dom: ^18 → 19.0.2
+- [x] eslint-config-next: 14.2.5 → 15.0.3
+
+### �tape 4: Configuration et ajustements
+- [ ] V�rification des fichiers de configuration
+- [ ] Mise � jour des imports si n�cessaire
+- [ ] Ajustements des types TypeScript
+
+### �tape 5: Tests et validation
+- [ ] Installation des nouvelles d�pendances
+- [ ] Compilation du projet
+- [ ] Tests fonctionnels
+- [ ] V�rification des performances
+
+## Notes importantes
+- Next.js 15 n�cessite React 19
+- V�rifier la compatibilit� des packages tiers
+- Tester particuli�rement NextAuth et Prisma
+
+## Statut actuel: EN COURS - Étape 4
+
+## Modifications effectuées:
+- ✅ Next.js: 14.2.9 → latest
+- ✅ React: ^18 → latest  
+- ✅ React-DOM: ^18 → latest
+- ✅ @types/react: ^18 → latest
+- ✅ @types/react-dom: ^18 → latest
+- ✅ eslint-config-next: 14.2.5 → latest
+
+## Erreur rencontrée: Conflits de dépendances
+- Next.js 15.0.3 demande React 19.0.0-rc-66855b96-20241106
+- Nous avons installé React 19.0.0 stable
+
+## Solution: Utiliser les versions latest comme recommandé
+Commande officielle: npm i next@latest react@latest react-dom@latest eslint-config-next@latest
