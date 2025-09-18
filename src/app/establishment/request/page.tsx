@@ -166,49 +166,37 @@ const EstablishmentRequestPage: React.FC = () => {
     // Récupérer les détails de l'établissement pour auto-remplir les champs
     setIsLoadingDetails(true);
     try {
-      const response = await fetch('/api/places/details', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          placeId: place.place_id
-        }),
+      const details = await service.searchById({ placeId: place.place_id });
+      const fieldsToFill = [];
+
+      // Auto-remplir les champs disponibles
+      setFormData(prev => {
+        const newData = { ...prev };
+
+        if (details.internationalPhoneNumber && !prev.phone) {
+          newData.phone = details.internationalPhoneNumber;
+          fieldsToFill.push('phone');
+        }
+
+        if (details.websiteUri && !prev.website) {
+          newData.website = details.websiteUri;
+          fieldsToFill.push('website');
+        }
+
+        if (!prev.description && details.formattedAddress) {
+          newData.description = `Établissement situé à ${details.formattedAddress}`;
+          fieldsToFill.push('description');
+        }
+
+        return newData;
       });
 
-      if (response.ok) {
-        const details = await response.json();
-        const fieldsToFill = [];
+      setAutoFilledFields(fieldsToFill);
 
-        // Auto-remplir les champs disponibles
-        setFormData(prev => {
-          const newData = { ...prev };
-
-          if (details.phone && !prev.phone) {
-            newData.phone = details.phone;
-            fieldsToFill.push('phone');
-          }
-
-          if (details.website && !prev.website) {
-            newData.website = details.website;
-            fieldsToFill.push('website');
-          }
-
-          if (!prev.description && details.address) {
-            newData.description = `Établissement situé à ${details.address}`;
-            fieldsToFill.push('description');
-          }
-
-          return newData;
-        });
-
-        setAutoFilledFields(fieldsToFill);
-
-        // Effacer les indicateurs après 3 secondes
-        setTimeout(() => {
-          setAutoFilledFields([]);
-        }, 3000);
-      }
+      // Effacer les indicateurs après 3 secondes
+      setTimeout(() => {
+        setAutoFilledFields([]);
+      }, 3000);
     } catch (error) {
       console.error('Erreur lors de la récupération des détails:', error);
       // Ne pas bloquer si l'API échoue, continuer avec les données de base

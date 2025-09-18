@@ -232,7 +232,7 @@ export class Service implements ServiceInterface {
     requestHeaders.set("X-Goog-Api-Key", this.apiKey);
     requestHeaders.set(
       "X-Goog-FieldMask",
-      "id,displayName,photos,formattedAddress,rating,internationalPhoneNumber,currentOpeningHours,types"
+      "id,displayName,photos,formattedAddress,rating,internationalPhoneNumber,websiteUri,currentOpeningHours,types"
     );
 
     const response = await fetch(url, {
