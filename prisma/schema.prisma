@@ -15,6 +15,11 @@ model User {
   password        String?
   image           String?
   role            UserRole            @default(USER)
+  subscription    SubscriptionType    @default(FREEMIUM)
+  stripeCustomerId String?
+  subscriptionId  String?
+  subscriptionStatus SubscriptionStatus @default(INACTIVE)
+  currentPeriodEnd DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   reviews         Review[]
@@ -208,4 +213,19 @@ enum StaffPermission {
   MANAGE_RESERVATIONS
   VIEW_ANALYTICS
   MANAGE_ESTABLISHMENT
+}
+
+enum SubscriptionType {
+  FREEMIUM
+  BUSINESS
+  ENTERPRISE
+  PREMIUM_PLUS
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
 }

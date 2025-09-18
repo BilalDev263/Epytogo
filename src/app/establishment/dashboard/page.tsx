@@ -21,7 +21,9 @@ import {
   Check,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft,
+  ChevronDown
 } from 'lucide-react';
 
 interface Establishment {
@@ -71,6 +73,7 @@ const EstablishmentDashboard: React.FC = () => {
   const [updatingReservation, setUpdatingReservation] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarReservations, setCalendarReservations] = useState<Reservation[]>([]);
+  const [showEstablishmentSelector, setShowEstablishmentSelector] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -82,6 +85,21 @@ const EstablishmentDashboard: React.FC = () => {
 
     fetchEstablishments();
   }, [session, status]);
+
+  // Fermer le sélecteur en cliquant ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.establishment-selector')) {
+        setShowEstablishmentSelector(false);
+      }
+    };
+
+    if (showEstablishmentSelector) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showEstablishmentSelector]);
 
   const fetchEstablishments = async () => {
     try {
@@ -141,6 +159,12 @@ const EstablishmentDashboard: React.FC = () => {
     } finally {
       setUpdatingReservation(null);
     }
+  };
+
+  const handleEstablishmentChange = (establishment: Establishment) => {
+    setSelectedEstablishment(establishment);
+    fetchReservations(establishment.id);
+    setShowEstablishmentSelector(false);
   };
 
   const getStatusBadge = (status: string) => {
@@ -340,6 +364,77 @@ const EstablishmentDashboard: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-900/20 dark:via-orange-900/10 dark:to-yellow-900/20">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
+          {/* Navigation Header */}
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={() => router.push('/')}
+              className="inline-flex items-center text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors duration-200"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Retour à l'interface client
+            </button>
+
+            {establishments.length > 1 && (
+              <div className="relative establishment-selector">
+                <button
+                  onClick={() => setShowEstablishmentSelector(!showEstablishmentSelector)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-800/30 transition-colors duration-200"
+                >
+                  <Building2 className="h-4 w-4 text-amber-600" />
+                  <span className="text-amber-900 dark:text-amber-100 font-medium">
+                    Changer d'établissement
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-amber-600 transition-transform duration-200 ${
+                    showEstablishmentSelector ? 'rotate-180' : ''
+                  }`} />
+                </button>
+
+                {showEstablishmentSelector && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50">
+                    <div className="p-2">
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                        Sélectionnez un établissement ({establishments.length})
+                      </div>
+                      {establishments.map((establishment) => (
+                        <button
+                          key={establishment.id}
+                          onClick={() => handleEstablishmentChange(establishment)}
+                          className={`w-full text-left p-3 rounded-lg transition-colors duration-200 flex items-center gap-3 ${
+                            selectedEstablishment?.id === establishment.id
+                              ? 'bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          <div className="text-xl">{getTypeIcon(establishment.type)}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 dark:text-white truncate">
+                              {establishment.name}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                establishment.isVerified
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}>
+                                {establishment.isVerified ? 'Vérifié' : 'En attente'}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {establishment._count.reservations} réservation(s)
+                              </span>
+                            </div>
+                          </div>
+                          {selectedEstablishment?.id === establishment.id && (
+                            <CheckCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <h1 className="text-4xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center gap-3">
             <Building2 className="h-10 w-10 text-amber-600 dark:text-amber-400" />
             Tableau de bord - Établissement

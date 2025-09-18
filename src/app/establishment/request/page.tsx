@@ -23,7 +23,8 @@ const EstablishmentRequestPage: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'success' | 'error' | ''>('');
+  const [messageType, setMessageType] = useState<'success' | 'error' | 'upgrade' | ''>('');
+  const [subscriptionError, setSubscriptionError] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     placeId: '',
@@ -72,8 +73,14 @@ const EstablishmentRequestPage: React.FC = () => {
           router.push('/establishment/dashboard');
         }, 3000);
       } else {
-        setMessage(data.error || 'Erreur lors de la soumission');
-        setMessageType('error');
+        if (data.upgradeRequired) {
+          setSubscriptionError(data);
+          setMessageType('upgrade');
+          setMessage(data.error || 'Mise à niveau d\'abonnement requise');
+        } else {
+          setMessage(data.error || 'Erreur lors de la soumission');
+          setMessageType('error');
+        }
       }
     } catch (error) {
       console.error('Erreur:', error);
@@ -384,21 +391,64 @@ const EstablishmentRequestPage: React.FC = () => {
                 <div className={`border rounded-lg p-4 ${
                   messageType === 'success'
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : messageType === 'upgrade'
+                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
                     : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                 }`}>
                   <div className="flex items-start">
                     {messageType === 'success' ? (
                       <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 mr-3 flex-shrink-0" />
+                    ) : messageType === 'upgrade' ? (
+                      <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 mr-3 flex-shrink-0" />
                     ) : (
                       <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 mr-3 flex-shrink-0" />
                     )}
-                    <p className={`text-sm ${
-                      messageType === 'success'
-                        ? 'text-green-800 dark:text-green-200'
-                        : 'text-red-800 dark:text-red-200'
-                    }`}>
-                      {message}
-                    </p>
+                    <div className="flex-1">
+                      <p className={`text-sm ${
+                        messageType === 'success'
+                          ? 'text-green-800 dark:text-green-200'
+                          : messageType === 'upgrade'
+                          ? 'text-amber-800 dark:text-amber-200'
+                          : 'text-red-800 dark:text-red-200'
+                      }`}>
+                        {message}
+                      </p>
+
+                      {/* Détails de l'abonnement et options de mise à niveau */}
+                      {messageType === 'upgrade' && subscriptionError && (
+                        <div className="mt-4 space-y-3">
+                          <div className="text-xs text-amber-700 dark:text-amber-300">
+                            <p><strong>Plan actuel :</strong> {subscriptionError.currentPlan}</p>
+                            <p><strong>Établissements :</strong> {subscriptionError.currentCount}/{subscriptionError.maxAllowed}</p>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Link
+                              href="/pricing"
+                              className="inline-flex items-center justify-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+                            >
+                              Voir les plans
+                            </Link>
+                            {subscriptionError.currentPlan === 'FREEMIUM' && (
+                              <Link
+                                href="/pricing?plan=business"
+                                className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+                              >
+                                Passer au Business (20€/mois)
+                              </Link>
+                            )}
+                            {subscriptionError.currentPlan === 'BUSINESS' && (
+                              <Link
+                                href="/pricing?plan=enterprise"
+                                className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+                              >
+                                Passer à Enterprise (50€/mois)
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

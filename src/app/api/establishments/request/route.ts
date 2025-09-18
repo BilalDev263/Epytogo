@@ -24,11 +24,63 @@ export async function POST(request: NextRequest) {
 
     // Vérifier si l'utilisateur existe
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
+      include: {
+        ownedEstablishments: true
+      }
     });
 
     if (!user) {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
+    }
+
+    // Vérifier les limites d'abonnement
+    const currentEstablishmentCount = user.ownedEstablishments.length;
+    let maxEstablishments = 0;
+
+    switch (user.subscription) {
+      case 'FREEMIUM':
+        maxEstablishments = 0;
+        break;
+      case 'BUSINESS':
+        maxEstablishments = 1;
+        break;
+      case 'ENTERPRISE':
+        maxEstablishments = 3;
+        break;
+      case 'PREMIUM_PLUS':
+        maxEstablishments = 999; // Illimité
+        break;
+      default:
+        maxEstablishments = 0;
+    }
+
+    if (currentEstablishmentCount >= maxEstablishments) {
+      let errorMessage = '';
+      switch (user.subscription) {
+        case 'FREEMIUM':
+          errorMessage = 'Vous devez souscrire à un abonnement payant pour enregistrer un établissement. Consultez nos plans sur la page pricing.';
+          break;
+        case 'BUSINESS':
+          errorMessage = 'Votre plan Business permet 1 établissement maximum. Passez au plan Enterprise pour en ajouter plus.';
+          break;
+        case 'ENTERPRISE':
+          errorMessage = 'Votre plan Enterprise permet 3 établissements maximum. Contactez-nous pour le plan Premium+ si vous avez besoin de plus.';
+          break;
+        default:
+          errorMessage = 'Limite d\'établissements atteinte pour votre abonnement.';
+      }
+
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          currentPlan: user.subscription,
+          currentCount: currentEstablishmentCount,
+          maxAllowed: maxEstablishments,
+          upgradeRequired: true
+        },
+        { status: 403 }
+      );
     }
 
     // Vérifier si l'établissement existe déjà
