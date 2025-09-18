@@ -39,6 +39,8 @@ const EstablishmentRequestPage: React.FC = () => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<string[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,25 +133,85 @@ const EstablishmentRequestPage: React.FC = () => {
     }
   };
 
-  const handlePlaceSelect = (place: any) => {
+  const handlePlaceSelect = async (place: any) => {
     setSelectedPlace(place);
     setSearchQuery(place.description || place.structured_formatting?.main_text || '');
+
+    // Mettre à jour les données de base
     setFormData(prev => ({
       ...prev,
       placeId: place.place_id,
       placeName: place.description || place.structured_formatting?.main_text || ''
     }));
+
     setShowSuggestions(false);
     setSuggestions([]);
+
+    // Récupérer les détails de l'établissement pour auto-remplir les champs
+    setIsLoadingDetails(true);
+    try {
+      const response = await fetch('/api/places/details', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          placeId: place.place_id
+        }),
+      });
+
+      if (response.ok) {
+        const details = await response.json();
+        const fieldsToFill = [];
+
+        // Auto-remplir les champs disponibles
+        setFormData(prev => {
+          const newData = { ...prev };
+
+          if (details.phone && !prev.phone) {
+            newData.phone = details.phone;
+            fieldsToFill.push('phone');
+          }
+
+          if (details.website && !prev.website) {
+            newData.website = details.website;
+            fieldsToFill.push('website');
+          }
+
+          if (!prev.description && details.address) {
+            newData.description = `Établissement situé à ${details.address}`;
+            fieldsToFill.push('description');
+          }
+
+          return newData;
+        });
+
+        setAutoFilledFields(fieldsToFill);
+
+        // Effacer les indicateurs après 3 secondes
+        setTimeout(() => {
+          setAutoFilledFields([]);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des détails:', error);
+      // Ne pas bloquer si l'API échoue, continuer avec les données de base
+    } finally {
+      setIsLoadingDetails(false);
+    }
   };
 
   const clearSelection = () => {
     setSelectedPlace(null);
     setSearchQuery('');
+    setAutoFilledFields([]);
     setFormData(prev => ({
       ...prev,
       placeId: '',
-      placeName: ''
+      placeName: '',
+      phone: '',
+      website: '',
+      description: ''
     }));
   };
 
@@ -318,6 +380,11 @@ const EstablishmentRequestPage: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description
+                  {autoFilledFields.includes('description') && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+                      ✓ Auto-rempli
+                    </span>
+                  )}
                 </label>
                 <div className="relative">
                   <FileText className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -327,7 +394,11 @@ const EstablishmentRequestPage: React.FC = () => {
                     onChange={handleInputChange}
                     rows={3}
                     placeholder="Décrivez votre établissement..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-400"
+                    className={`w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-400 ${
+                      autoFilledFields.includes('description')
+                        ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/10'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                   />
                 </div>
               </div>
@@ -337,6 +408,11 @@ const EstablishmentRequestPage: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Téléphone
+                    {autoFilledFields.includes('phone') && (
+                      <span className="ml-2 text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+                        ✓ Auto-rempli
+                      </span>
+                    )}
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -346,8 +422,17 @@ const EstablishmentRequestPage: React.FC = () => {
                       value={formData.phone}
                       onChange={handleInputChange}
                       placeholder="+33 1 23 45 67 89"
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-400"
+                      className={`w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-400 ${
+                        autoFilledFields.includes('phone')
+                          ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/10'
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}
                     />
+                    {isLoadingDetails && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600"></div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -372,6 +457,11 @@ const EstablishmentRequestPage: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Site web
+                  {autoFilledFields.includes('website') && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+                      ✓ Auto-rempli
+                    </span>
+                  )}
                 </label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -381,7 +471,11 @@ const EstablishmentRequestPage: React.FC = () => {
                     value={formData.website}
                     onChange={handleInputChange}
                     placeholder="https://www.restaurant.com"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-400"
+                    className={`w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-400 ${
+                      autoFilledFields.includes('website')
+                        ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/10'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                   />
                 </div>
               </div>

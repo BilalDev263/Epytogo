@@ -18,7 +18,13 @@ import {
   Eye,
   X,
   Filter,
-  BarChart3
+  BarChart3,
+  Crown,
+  Star,
+  Building2,
+  Sparkles,
+  CreditCard,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -67,6 +73,7 @@ const ProfilePage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [cancellingReservation, setCancellingReservation] = useState<string | null>(null);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [userSubscription, setUserSubscription] = useState<string>('FREEMIUM');
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -77,6 +84,7 @@ const ProfilePage: React.FC = () => {
     }
 
     fetchReservations();
+    fetchUserInfo();
   }, [session, status, filterStatus]);
 
   const fetchReservations = async () => {
@@ -124,6 +132,55 @@ const ProfilePage: React.FC = () => {
       alert('Erreur lors de l\'annulation de la réservation');
     } finally {
       setCancellingReservation(null);
+    }
+  };
+
+  const fetchUserInfo = async () => {
+    try {
+      const response = await fetch('/api/user/profile');
+      if (response.ok) {
+        const data = await response.json();
+        setUserSubscription(data.subscription || 'FREEMIUM');
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du profil:', error);
+    }
+  };
+
+  const getSubscriptionInfo = (subscription: string) => {
+    switch (subscription) {
+      case 'BUSINESS':
+        return {
+          name: 'Business',
+          icon: Star,
+          color: 'amber',
+          price: '20€/mois',
+          features: ['1 établissement', 'Sans publicités', 'Support prioritaire']
+        };
+      case 'ENTERPRISE':
+        return {
+          name: 'Enterprise',
+          icon: Crown,
+          color: 'blue',
+          price: '50€/mois',
+          features: ['3 établissements', 'Analytics avancées', 'Support direct']
+        };
+      case 'PREMIUM_PLUS':
+        return {
+          name: 'Premium+',
+          icon: Sparkles,
+          color: 'purple',
+          price: 'Sur mesure',
+          features: ['Établissements illimités', 'Solution personnalisée']
+        };
+      default:
+        return {
+          name: 'Freemium',
+          icon: Building2,
+          color: 'gray',
+          price: 'Gratuit',
+          features: ['Accès de base', 'Avec publicités']
+        };
     }
   };
 
@@ -237,6 +294,87 @@ const ProfilePage: React.FC = () => {
                 <div className="text-sm text-red-600 dark:text-red-400">Annulées</div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Mon Abonnement */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 mb-8">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+              <CreditCard className="h-6 w-6 text-amber-600" />
+              Mon Abonnement
+            </h2>
+          </div>
+
+          <div className="p-6">
+            {(() => {
+              const subInfo = getSubscriptionInfo(userSubscription);
+              const IconComponent = subInfo.icon;
+              return (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-4 rounded-xl ${
+                      subInfo.color === 'amber' ? 'bg-amber-100 dark:bg-amber-900/20' :
+                      subInfo.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/20' :
+                      subInfo.color === 'purple' ? 'bg-purple-100 dark:bg-purple-900/20' :
+                      'bg-gray-100 dark:bg-gray-700'
+                    }`}>
+                      <IconComponent className={`h-8 w-8 ${
+                        subInfo.color === 'amber' ? 'text-amber-600 dark:text-amber-400' :
+                        subInfo.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
+                        subInfo.color === 'purple' ? 'text-purple-600 dark:text-purple-400' :
+                        'text-gray-600 dark:text-gray-400'
+                      }`} />
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                        Plan {subInfo.name}
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {subInfo.price}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {subInfo.features.map((feature, index) => (
+                          <span key={index} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    {userSubscription === 'FREEMIUM' && (
+                      <Link
+                        href="/pricing"
+                        className="inline-flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors duration-200"
+                      >
+                        <Zap className="h-4 w-4 mr-2" />
+                        Passer Premium
+                      </Link>
+                    )}
+
+                    {userSubscription !== 'FREEMIUM' && userSubscription !== 'PREMIUM_PLUS' && (
+                      <Link
+                        href="/pricing"
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                      >
+                        <Crown className="h-4 w-4 mr-2" />
+                        Changer de plan
+                      </Link>
+                    )}
+
+                    <Link
+                      href="/pricing"
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors duration-200"
+                    >
+                      Voir tous les plans
+                    </Link>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
