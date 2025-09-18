@@ -1,12 +1,10 @@
 import { NavItem } from "@/components/navigation/types";
-import { Profile } from "@/components/Profile";
 import { useStore } from "@/store/useStore";
 import {
   BedSingle,
   HomeIcon,
   LogOut,
   Star,
-  User,
   UtensilsCrossed,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -53,12 +51,6 @@ export const useNavigation = () => {
         setItem("home");
         router.push("/");
       },
-    },
-    {
-      id: "profile",
-      name: "Profil",
-      tooltip: true,
-      icon: <Profile trigger={<User size={20} />} />,
     },
     {
       id: "logout",

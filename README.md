@@ -30,11 +30,23 @@ Epytogo est une application web moderne qui transforme l'expérience de voyage e
 - **Modération** : Les utilisateurs peuvent modifier leurs propres avis
 - **Affichage unifié** : Interface cohérente entre avis internes et externes
 
+### 💼 **Système d'abonnements**
+- **Freemium** : Accès gratuit avec publicités
+- **Business (20€/mois)** : 1 établissement, sans pub, dashboard propriétaire
+- **Enterprise (50€/mois)** : 3 établissements, analytics avancées, API access
+- **Premium Plus** : Établissements illimités, support premium
+
 ### 🎯 **Monétisation intégrée**
 - **Système publicitaire** : 8 positions stratégiques d'annonces
 - **Analytics avancées** : Suivi des impressions, clics et revenus en temps réel
 - **Optimisation automatique** : Rotation intelligente des annonces
 - **Dashboard complet** : Métriques CPM, CPC et performance globale
+
+### 🏢 **Gestion d'établissements**
+- **Workflow complet** : Demande → Approbation → Gestion
+- **Types supportés** : Restaurants, hôtels, attractions touristiques
+- **Dashboard propriétaire** : Calendrier, réservations, statistiques
+- **Intégration Google Places** : Auto-complétion et données enrichies
 
 ## 🛠 Stack technique
 

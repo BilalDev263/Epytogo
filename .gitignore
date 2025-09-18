@@ -43,3 +43,6 @@ prisma/generated/
 /rapport
 
 /.claude
+
+# Documentation interne
+FEATURES_OVERVIEW.md
