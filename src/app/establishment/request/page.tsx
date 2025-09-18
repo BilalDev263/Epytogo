@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { Service } from "@/services/Service";
 import {
   Building2,
   MapPin,
@@ -42,6 +43,11 @@ const EstablishmentRequestPage: React.FC = () => {
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<string[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  const service = useMemo(
+    () => new Service("https://places.googleapis.com", "POST"),
+    []
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,25 +117,35 @@ const EstablishmentRequestPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch('/api/places/autocomplete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const autocompleteResults = await service.autocomplete({
+        input: value,
+        locationBias: {
+          circle: {
+            center: { latitude: 26.8206, longitude: 30.8025 }, // Centre de l'Égypte
+            radius: 500000 // 500km de rayon pour couvrir l'Égypte
+          }
         },
-        body: JSON.stringify({
-          input: value,
-          types: ['establishment'],
-          language: 'fr',
-          componentRestrictions: { country: 'eg' } // Restriction à l'Égypte
-        }),
+        includedTypes: ["establishment"],
+        languageCode: "fr"
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setSuggestions(data.predictions || []);
+      if (autocompleteResults?.suggestions && autocompleteResults.suggestions.length > 0) {
+        const suggestionData = autocompleteResults.suggestions.map((suggestion: any) => ({
+          place_id: suggestion.placePrediction?.placeId || '',
+          description: suggestion.placePrediction?.text?.text || '',
+          structured_formatting: {
+            main_text: suggestion.placePrediction?.structuredFormat?.mainText?.text ||
+                      suggestion.placePrediction?.text?.text || ''
+          }
+        }));
+
+        setSuggestions(suggestionData);
+      } else {
+        setSuggestions([]);
       }
     } catch (error) {
       console.error('Erreur lors de la recherche:', error);
+      setSuggestions([]);
     }
   };
 
