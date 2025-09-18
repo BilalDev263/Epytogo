@@ -38,10 +38,9 @@ export function ThemeToggle() {
         
         <div className={cn(
           "absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 transition-all duration-300",
-          resolvedTheme === "dark" 
-            ? "bg-blue-500 border-slate-800" 
-            : "bg-yellow-500 border-white",
-          "animate-pulse"
+          resolvedTheme === "dark"
+            ? "bg-blue-500 border-slate-800"
+            : "bg-yellow-500 border-white"
         )} />
       </Button>
 
@@ -76,7 +75,7 @@ export function ThemeToggle() {
                   <span className="font-medium">{themeOption.label}</span>
                   
                   {isActive && (
-                    <div className="ml-auto w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                    <div className="ml-auto w-2 h-2 bg-yellow-500 rounded-full" />
                   )}
                 </button>
               );
