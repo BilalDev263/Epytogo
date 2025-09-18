@@ -16,7 +16,12 @@ import {
   MoreVertical,
   ChevronLeft,
   ChevronRight,
-  Filter
+  Filter,
+  Building2,
+  Star,
+  CheckCircle,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 
 interface User {
@@ -24,14 +29,24 @@ interface User {
   firstname: string | null;
   lastname: string | null;
   email: string;
-  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN' | 'RESTAURANT_OWNER' | 'HOTEL_OWNER' | 'ATTRACTION_OWNER';
   image: string | null;
+  subscription: 'FREEMIUM' | 'BUSINESS' | 'ENTERPRISE' | 'PREMIUM_PLUS' | null;
+  subscriptionStatus: 'ACTIVE' | 'INACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING' | null;
   createdAt: string;
   updatedAt: string;
+  ownedEstablishments: Array<{
+    id: string;
+    name: string;
+    type: 'RESTAURANT' | 'HOTEL' | 'ATTRACTION';
+    isVerified: boolean;
+    isActive: boolean;
+  }>;
   _count: {
     reviews: number;
     visits: number;
     reservations: number;
+    ownedEstablishments: number;
   };
 }
 
@@ -151,6 +166,12 @@ const UserManagementPage: React.FC = () => {
         return <Crown className="h-4 w-4 text-purple-600" />;
       case 'ADMIN':
         return <Shield className="h-4 w-4 text-blue-600" />;
+      case 'RESTAURANT_OWNER':
+        return <span className="text-orange-600">🍽️</span>;
+      case 'HOTEL_OWNER':
+        return <span className="text-blue-600">🏨</span>;
+      case 'ATTRACTION_OWNER':
+        return <span className="text-green-600">🎯</span>;
       default:
         return <UserIcon className="h-4 w-4 text-gray-600" />;
     }
@@ -163,8 +184,49 @@ const UserManagementPage: React.FC = () => {
         return `${baseClasses} bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200`;
       case 'ADMIN':
         return `${baseClasses} bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200`;
+      case 'RESTAURANT_OWNER':
+        return `${baseClasses} bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200`;
+      case 'HOTEL_OWNER':
+        return `${baseClasses} bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200`;
+      case 'ATTRACTION_OWNER':
+        return `${baseClasses} bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200`;
       default:
         return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200`;
+    }
+  };
+
+  const getSubscriptionBadge = (subscription: string | null, status: string | null) => {
+    if (!subscription || subscription === 'FREEMIUM') {
+      return <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">Freemium</span>;
+    }
+
+    const isActive = status === 'ACTIVE';
+    const baseClasses = "px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1";
+
+    switch (subscription) {
+      case 'BUSINESS':
+        return (
+          <span className={`${baseClasses} ${isActive ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' : 'bg-gray-100 text-gray-800'}`}>
+            <Star className="h-3 w-3" />
+            Business {!isActive && '(Inactif)'}
+          </span>
+        );
+      case 'ENTERPRISE':
+        return (
+          <span className={`${baseClasses} ${isActive ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-gray-100 text-gray-800'}`}>
+            <Crown className="h-3 w-3" />
+            Enterprise {!isActive && '(Inactif)'}
+          </span>
+        );
+      case 'PREMIUM_PLUS':
+        return (
+          <span className={`${baseClasses} ${isActive ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-gray-100 text-gray-800'}`}>
+            <Crown className="h-3 w-3" />
+            Premium+ {!isActive && '(Inactif)'}
+          </span>
+        );
+      default:
+        return <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">-</span>;
     }
   };
 
@@ -221,6 +283,9 @@ const UserManagementPage: React.FC = () => {
                 >
                   <option value="">Tous les rôles</option>
                   <option value="USER">Utilisateur</option>
+                  <option value="RESTAURANT_OWNER">Restaurateur</option>
+                  <option value="HOTEL_OWNER">Hôtelier</option>
+                  <option value="ATTRACTION_OWNER">Guide</option>
                   <option value="ADMIN">Admin</option>
                   <option value="SUPER_ADMIN">Super Admin</option>
                 </select>
@@ -237,6 +302,12 @@ const UserManagementPage: React.FC = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wider">
                     Rôle
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                    Abonnement
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                    Établissements
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wider">
                     Activité
@@ -284,9 +355,48 @@ const UserManagementPage: React.FC = () => {
                       <span className={getRoleBadge(user.role)}>
                         <span className="flex items-center gap-1">
                           {getRoleIcon(user.role)}
-                          {user.role}
+                          {user.role === 'RESTAURANT_OWNER' ? 'Restaurateur' :
+                           user.role === 'HOTEL_OWNER' ? 'Hôtelier' :
+                           user.role === 'ATTRACTION_OWNER' ? 'Guide' :
+                           user.role}
                         </span>
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getSubscriptionBadge(user.subscription, user.subscriptionStatus)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {user._count.ownedEstablishments > 0 ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-white">
+                            <Building2 className="h-3 w-3" />
+                            {user._count.ownedEstablishments} établissement(s)
+                          </div>
+                          {user.ownedEstablishments.slice(0, 2).map((establishment) => (
+                            <div key={establishment.id} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                              <span className="text-sm">
+                                {establishment.type === 'RESTAURANT' ? '🍽️' :
+                                 establishment.type === 'HOTEL' ? '🏨' : '🎯'}
+                              </span>
+                              <span className="truncate max-w-24" title={establishment.name}>
+                                {establishment.name}
+                              </span>
+                              {establishment.isVerified ? (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3 text-yellow-500" />
+                              )}
+                            </div>
+                          ))}
+                          {user.ownedEstablishments.length > 2 && (
+                            <div className="text-xs text-gray-500">
+                              +{user.ownedEstablishments.length - 2} autre(s)
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Aucun</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       <div className="space-y-1">
@@ -452,6 +562,9 @@ const EditUserModal: React.FC<{
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
             >
               <option value="USER">Utilisateur</option>
+              <option value="RESTAURANT_OWNER">Restaurateur</option>
+              <option value="HOTEL_OWNER">Hôtelier</option>
+              <option value="ATTRACTION_OWNER">Guide</option>
               <option value="ADMIN">Admin</option>
               <option value="SUPER_ADMIN">Super Admin</option>
             </select>

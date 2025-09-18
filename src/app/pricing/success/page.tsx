@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -41,7 +41,7 @@ const planDetails = {
   }
 };
 
-const PaymentSuccessPage: React.FC = () => {
+const PaymentSuccessPageContent: React.FC = () => {
   const { data: session, update } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -278,6 +278,23 @@ const PaymentSuccessPage: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const PaymentSuccessPage: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-900/20 dark:via-orange-900/10 dark:to-yellow-900/20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-amber-600 mx-auto mb-6"></div>
+          <h1 className="text-2xl font-bold text-amber-900 dark:text-amber-100 mb-2">
+            Chargement...
+          </h1>
+        </div>
+      </div>
+    }>
+      <PaymentSuccessPageContent />
+    </Suspense>
   );
 };
 

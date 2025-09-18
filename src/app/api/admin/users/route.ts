@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminAuth } from '@/lib/admin-auth';
 import { prisma } from '@/db/prisma';
 
+// Force la route à être dynamique
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const authResult = await verifyAdminAuth('ADMIN');
@@ -47,13 +50,25 @@ export async function GET(request: NextRequest) {
           email: true,
           role: true,
           image: true,
+          subscription: true,
+          subscriptionStatus: true,
           createdAt: true,
           updatedAt: true,
+          ownedEstablishments: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              isVerified: true,
+              isActive: true
+            }
+          },
           _count: {
             select: {
               reviews: true,
               visits: true,
-              reservations: true
+              reservations: true,
+              ownedEstablishments: true
             }
           }
         },

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminAuth } from '@/lib/admin-auth';
 import { prisma } from '@/db/prisma';
 
+// Force la route à être dynamique
+export const dynamic = 'force-dynamic';
+
 // Récupérer tous les établissements pour les admins
 export async function GET(request: NextRequest) {
   try {

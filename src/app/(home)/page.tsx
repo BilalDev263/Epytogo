@@ -10,7 +10,10 @@ export default function HomePage() {
   const { setCurrentUser, currentUser } = useStore();
 
   useEffect(() => {
-    if (session?.user) setCurrentUser(session?.user);
+    if (session?.user) {
+      // Cast explicite pour éviter les conflits de types
+      setCurrentUser(session.user as any);
+    }
   }, []);
 
   return <Home />;

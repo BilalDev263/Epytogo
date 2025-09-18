@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth/auth';
 import { prisma } from '@/db/prisma';
 
+// Force la route à être dynamique
+export const dynamic = 'force-dynamic';
+
 // Configuration des plans Stripe
 const STRIPE_PLANS = {
   business: {
