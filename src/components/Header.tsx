@@ -9,6 +9,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 import AdminButton from "./admin/AdminButton";
+import EstablishmentButton from "./establishment/EstablishmentButton";
 
 export const Header = () => {
   const { navItemsHeader } = useNavigation();
@@ -35,11 +36,13 @@ export const Header = () => {
 
         <nav className="hidden md:flex items-center gap-6">
           <Navigation navItems={navItemsHeader} />
+          <EstablishmentButton />
           <AdminButton />
           <ThemeToggle />
         </nav>
 
         <div className="flex items-center gap-2 md:hidden">
+          <EstablishmentButton />
           <AdminButton />
           <ThemeToggle />
           <button

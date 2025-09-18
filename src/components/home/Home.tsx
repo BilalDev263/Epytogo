@@ -10,7 +10,7 @@ import { CustomCard } from "./CustomCard";
 import { SkeletonCard } from "./SkeletonCard";
 import GoogleMapRender from "../GoogleMap";
 import { Button } from "../ui/button";
-import { Search, Map, Grid, Filter, Sparkles } from "lucide-react";
+import { Search, Map, Grid, Filter, Sparkles, Building2, Plus } from "lucide-react";
 import { adaptPlacesForCards } from "@/utils/placeAdapter";
 import TravelChatbot from "../TravelChatbot";
 import { VisitHistory } from "./VisitHistory";
@@ -506,6 +506,23 @@ const getFallbackSuggestions = (value: string): string[] => {
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
             Restaurants 🍽️, Hôtels 🏨 et Attractions Touristiques 🏛️
           </p>
+
+          {/* Bouton pour enregistrer un établissement */}
+          {session?.user && (
+            <div className="mb-6">
+              <Button
+                onClick={() => router.push('/establishment/request')}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 mx-auto"
+              >
+                <Building2 className="h-5 w-5" />
+                Enregistrer mon établissement
+                <Plus className="h-4 w-4" />
+              </Button>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                Vous êtes propriétaire d'un restaurant, hôtel ou attraction ? Rejoignez-nous !
+              </p>
+            </div>
+          )}
 
           {/* Bannière publicitaire header */}
           <div className="mb-6">

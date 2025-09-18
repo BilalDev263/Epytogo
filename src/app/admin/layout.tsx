@@ -21,10 +21,10 @@ export default function AdminLayout({
               {/* Header */}
               <div className="mb-8">
                 <h1 className="text-2xl font-bold text-amber-800 dark:text-amber-200 mb-2">
-                  Gestion des utilisateurs
+                  Administration
                 </h1>
                 <p className="text-amber-700 dark:text-amber-300 text-sm">
-                  Administration Epytogo
+                  Gestion de la plateforme Epytogo
                 </p>
               </div>
 

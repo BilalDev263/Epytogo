@@ -8,19 +8,21 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  firstname    String?
-  lastname     String?
-  email        String        @unique
-  password     String?
-  image        String?
-  role         UserRole      @default(USER)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  reviews      Review[]
-  visits       Visit[]
-  reservations Reservation[]
-  adClicks     AdClick[]
+  id              String              @id @default(auto()) @map("_id") @db.ObjectId
+  firstname       String?
+  lastname        String?
+  email           String              @unique
+  password        String?
+  image           String?
+  role            UserRole            @default(USER)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  reviews         Review[]
+  visits          Visit[]
+  reservations    Reservation[]
+  adClicks        AdClick[]
+  ownedEstablishments Establishment[] @relation("EstablishmentOwner")
+  staffEstablishments EstablishmentStaff[]
 }
 
 model Review {
@@ -47,24 +49,64 @@ model Visit {
 }
 
 model Reservation {
-  id            String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String            @db.ObjectId
-  user          User              @relation(fields: [userId], references: [id])
-  placeId       String
-  placeName     String
-  placeType     PlaceType
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String            @db.ObjectId
+  user            User              @relation(fields: [userId], references: [id])
+  placeId         String
+  placeName       String
+  placeType       PlaceType
+  establishmentId String?           @db.ObjectId
+  establishment   Establishment?    @relation("EstablishmentReservations", fields: [establishmentId], references: [id])
   reservationDate DateTime
-  timeSlot      String?           // Pour restaurants/attractions (ex: "14:00-16:00")
-  roomNumber    String?           // Pour hotels (ex: "101", "Suite Deluxe")
-  numberOfGuests Int              @default(1)
-  status        ReservationStatus @default(PENDING)
+  timeSlot        String?           // Pour restaurants/attractions (ex: "14:00-16:00")
+  roomNumber      String?           // Pour hotels (ex: "101", "Suite Deluxe")
+  numberOfGuests  Int               @default(1)
+  status          ReservationStatus @default(PENDING)
   specialRequests String?
-  totalPrice    Float?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  
+  totalPrice      Float?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
   @@index([placeId, reservationDate])
   @@index([userId, reservationDate(sort: Desc)])
+  @@index([establishmentId, reservationDate])
+}
+
+model Establishment {
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  placeId     String              @unique // ID du lieu dans l'API Google Places
+  name        String
+  type        PlaceType
+  description String?
+  address     String?
+  phone       String?
+  email       String?
+  website     String?
+  isActive    Boolean             @default(true)
+  isVerified  Boolean             @default(false)
+  ownerId     String              @db.ObjectId
+  owner       User                @relation("EstablishmentOwner", fields: [ownerId], references: [id])
+  staff       EstablishmentStaff[]
+  reservations Reservation[]       @relation("EstablishmentReservations")
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([type, isActive])
+}
+
+model EstablishmentStaff {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String        @db.ObjectId
+  user            User          @relation(fields: [userId], references: [id])
+  establishmentId String        @db.ObjectId
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+  permissions     StaffPermission[]
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([userId, establishmentId])
+  @@index([establishmentId, isActive])
 }
 
 enum PlaceType {
@@ -155,4 +197,15 @@ enum UserRole {
   USER
   ADMIN
   SUPER_ADMIN
+  RESTAURANT_OWNER
+  HOTEL_OWNER
+  ATTRACTION_OWNER
+  ESTABLISHMENT_STAFF
+}
+
+enum StaffPermission {
+  VIEW_RESERVATIONS
+  MANAGE_RESERVATIONS
+  VIEW_ANALYTICS
+  MANAGE_ESTABLISHMENT
 }

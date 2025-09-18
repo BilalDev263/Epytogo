@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/db/prisma";
+import { prisma } from "@/db/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth/auth";
 
@@ -80,6 +80,12 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
+    // Vérifier si un établissement existe pour ce placeId
+    const establishment = await prisma.establishment.findUnique({
+      where: { placeId },
+      select: { id: true }
+    });
+
     // Créer la réservation
     const reservation = await prisma.reservation.create({
       data: {
@@ -92,7 +98,8 @@ export async function POST(request: NextRequest) {
         roomNumber,
         numberOfGuests: parseInt(numberOfGuests) || 1,
         specialRequests,
-        totalPrice: totalPrice ? parseFloat(totalPrice) : null
+        totalPrice: totalPrice ? parseFloat(totalPrice) : null,
+        ...(establishment && { establishmentId: establishment.id })
       },
       include: {
         user: {

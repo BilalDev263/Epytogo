@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Users,
-  Shield
+  Shield,
+  Building2
 } from 'lucide-react';
 
 const AdminNavigation: React.FC = () => {
@@ -17,6 +18,12 @@ const AdminNavigation: React.FC = () => {
       label: 'Gestion des utilisateurs',
       icon: Users,
       description: 'Gérer les comptes utilisateurs'
+    },
+    {
+      href: '/admin/establishments',
+      label: 'Gestion des établissements',
+      icon: Building2,
+      description: 'Vérifier et gérer les établissements'
     }
   ];
 

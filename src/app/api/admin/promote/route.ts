@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { authOptions } from '@/auth/auth';
+import { prisma } from '@/db/prisma';
 
 // API pour promouvoir le premier utilisateur en SUPER_ADMIN (pour l'initialisation)
 export async function POST(request: NextRequest) {

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminAuth, canModifyUser, canAssignRole } from '@/lib/admin-auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/db/prisma';
 
 // Mettre à jour un utilisateur
 export async function PATCH(
