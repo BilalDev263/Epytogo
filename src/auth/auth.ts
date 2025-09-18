@@ -73,11 +73,22 @@ export const authOptions: AuthOptions = {
           });
 
           if (existingUser) {
+            // Mettre à jour l'utilisateur existant avec les nouveaux champs si nécessaires
+            const updateData: any = {
+              image: user.image,
+            };
+
+            // Ajouter les champs manquants s'ils n'existent pas
+            if (!existingUser.subscription) {
+              updateData.subscription = 'FREEMIUM';
+            }
+            if (!existingUser.subscriptionStatus) {
+              updateData.subscriptionStatus = 'ACTIVE';
+            }
+
             await prisma.user.update({
               where: { email: user.email! },
-              data: {
-                image: user.image,
-              }
+              data: updateData
             });
           } else {
             await prisma.user.create({
@@ -86,6 +97,8 @@ export const authOptions: AuthOptions = {
                 firstname: user.name?.split(' ')[0] || '',
                 lastname: user.name?.split(' ').slice(1).join(' ') || '',
                 image: user.image,
+                subscription: 'FREEMIUM',
+                subscriptionStatus: 'ACTIVE',
               }
             });
           }
@@ -113,14 +126,26 @@ export const authOptions: AuthOptions = {
         token.user = user as any;
       }
 
-      // Toujours récupérer le rôle le plus récent depuis la DB
+      // Toujours récupérer tous les champs utilisateur depuis la DB pour avoir les données à jour
       if (token.email) {
         const currentUser = await prisma.user.findUnique({
           where: { email: token.email },
-          select: { role: true }
+          select: {
+            id: true,
+            role: true,
+            subscription: true,
+            subscriptionStatus: true,
+            firstname: true,
+            lastname: true,
+            email: true,
+            image: true
+          }
         });
         if (currentUser && token.user) {
-          token.user.role = currentUser.role;
+          token.user = {
+            ...token.user,
+            ...currentUser
+          };
         }
       }
 
