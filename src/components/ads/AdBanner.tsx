@@ -69,8 +69,9 @@ const AdBanner: React.FC<AdBannerProps> = ({ position, className = '', limit = 1
   const getAdStyles = () => {
     switch (position) {
       case 'SIDEBAR_LEFT':
+        return 'w-full max-w-[280px] h-[500px]';
       case 'SIDEBAR_RIGHT':
-        return 'w-80 h-[500px]';
+        return 'w-full max-w-[280px] h-[500px]';
       case 'HEADER_BANNER':
         return 'w-full h-24 md:h-32';
       case 'SIDEBAR_TOP':
