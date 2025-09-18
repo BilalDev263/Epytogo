@@ -8,6 +8,7 @@ import Image from "next/image";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
+import AdminButton from "./admin/AdminButton";
 
 export const Header = () => {
   const { navItemsHeader } = useNavigation();
@@ -34,10 +35,12 @@ export const Header = () => {
 
         <nav className="hidden md:flex items-center gap-6">
           <Navigation navItems={navItemsHeader} />
+          <AdminButton />
           <ThemeToggle />
         </nav>
 
         <div className="flex items-center gap-2 md:hidden">
+          <AdminButton />
           <ThemeToggle />
           <button
             className="p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"

@@ -112,6 +112,18 @@ export const authOptions: AuthOptions = {
       } else if (user) {
         token.user = user as any;
       }
+
+      // Toujours récupérer le rôle le plus récent depuis la DB
+      if (token.email) {
+        const currentUser = await prisma.user.findUnique({
+          where: { email: token.email },
+          select: { role: true }
+        });
+        if (currentUser && token.user) {
+          token.user.role = currentUser.role;
+        }
+      }
+
       return token;
     },
     async session({ token, session }) {
