@@ -44,10 +44,11 @@ const EstablishmentRequestPage: React.FC = () => {
   const [autoFilledFields, setAutoFilledFields] = useState<string[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const service = useMemo(
-    () => new Service("https://places.googleapis.com", "POST"),
-    []
-  );
+  const service = useMemo(() => {
+    const serviceInstance = new Service("https://places.googleapis.com", "POST");
+    serviceInstance.setMaxResults(4);
+    return serviceInstance;
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -34,10 +34,11 @@ export function Home() {
   const { currentUser, setCurrentUser } = useStore();
   const router = useRouter();
 
-  const service = useMemo(
-    () => new Service("https://places.googleapis.com", "POST"),
-    []
-  );
+  const service = useMemo(() => {
+    const serviceInstance = new Service("https://places.googleapis.com", "POST");
+    serviceInstance.setMaxResults(4); // Limité à 4 résultats
+    return serviceInstance;
+  }, []);
   useEffect(() => {
     if (session?.user) {
       setCurrentUser(session.user);

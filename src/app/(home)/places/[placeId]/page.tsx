@@ -42,10 +42,11 @@ export default function Page({ params }: { params: { placeId: string } }) {
   const { data: session } = useSession();
   const { currentUser, setCurrentUser } = useStore();
 
-  const service = useMemo(
-    () => new Service("https://places.googleapis.com", "POST"),
-    []
-  );
+  const service = useMemo(() => {
+    const serviceInstance = new Service("https://places.googleapis.com", "POST");
+    serviceInstance.setMaxResults(4);
+    return serviceInstance;
+  }, []);
 
   const fetchPlaceDetails = async () => {
     if (!placeId) return;

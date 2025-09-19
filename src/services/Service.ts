@@ -11,7 +11,7 @@ type Method = "GET" | "POST" | "PUT" | "DELETE";
 export class Service implements ServiceInterface {
   apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "";
 
-  private maxResults = 1;
+  private maxResults = 4;
 
   constructor(public baseUrl: string, public method: Method) {
     this.baseUrl = baseUrl;
@@ -48,6 +48,44 @@ export class Service implements ServiceInterface {
       restaurants: organized.restaurants.slice(0, this.maxResults),
       attractions: organized.attractions.slice(0, this.maxResults)
     };
+  }
+
+  private sortByRelevance(places: PlaceResult[], searchTerm: string): PlaceResult[] {
+    if (!searchTerm) return places;
+
+    const term = searchTerm.toLowerCase().trim();
+
+    return places.sort((a, b) => {
+      const nameA = a.displayName?.text?.toLowerCase() || '';
+      const nameB = b.displayName?.text?.toLowerCase() || '';
+
+      // 1. Priorité maximale : commence par le terme
+      const aStartsWith = nameA.startsWith(term);
+      const bStartsWith = nameB.startsWith(term);
+
+      if (aStartsWith && !bStartsWith) return -1;
+      if (!aStartsWith && bStartsWith) return 1;
+
+      // 2. Deuxième priorité : contient le terme au début d'un mot
+      const aWordStart = nameA.includes(` ${term}`) || nameA.startsWith(term);
+      const bWordStart = nameB.includes(` ${term}`) || nameB.startsWith(term);
+
+      if (aWordStart && !bWordStart) return -1;
+      if (!aWordStart && bWordStart) return 1;
+
+      // 3. Troisième priorité : contient le terme n'importe où
+      const aContains = nameA.includes(term);
+      const bContains = nameB.includes(term);
+
+      if (aContains && !bContains) return -1;
+      if (!aContains && bContains) return 1;
+
+      // 4. Tri par rating si disponible
+      const ratingA = a.rating || 0;
+      const ratingB = b.rating || 0;
+
+      return ratingB - ratingA;
+    });
   }
 
   private applyMaxResultsFilter(places: PlaceResult[]): PlaceResult[] {
@@ -153,7 +191,7 @@ export class Service implements ServiceInterface {
     const body = JSON.stringify({
       textQuery,
       includedType: type,
-      maxResultCount: Math.max(this.maxResults * 3, 20),
+      maxResultCount: 20,
     });
 
     const requestHeaders = new Headers();
@@ -191,19 +229,23 @@ export class Service implements ServiceInterface {
   }: {
     name?: string;
   }): Promise<PlaceResult[]> {
-    return this.searchByText({
+    const results = await this.searchByText({
       query: "Egypt",
       type: "restaurant",
       name,
     });
+
+    return this.sortByRelevance(results, name);
   }
 
   async searchHotels({ name = "" }: { name?: string }): Promise<PlaceResult[]> {
-    return this.searchByText({
+    const results = await this.searchByText({
       query: "Egypt",
       type: "lodging",
       name,
     });
+
+    return this.sortByRelevance(results, name);
   }
 
   async searchRestaurantsAndHotels({
@@ -219,10 +261,11 @@ export class Service implements ServiceInterface {
       name,
     });
 
-    const limitedRestaurants = restaurants.slice(0, this.maxResults);
-    const limitedHotels = hotels.slice(0, this.maxResults);
+    // Combine et trie par pertinence
+    const combined = [...restaurants, ...hotels];
+    const sorted = this.sortByRelevance(combined, name);
 
-    return [...limitedRestaurants, ...limitedHotels];
+    return sorted.slice(0, this.maxResults);
   }
 
   async searchById({ placeId }: { placeId: string }): Promise<PlaceResult> {
