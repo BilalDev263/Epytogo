@@ -499,49 +499,50 @@ const getFallbackSuggestions = (value: string): string[] => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-4">
             Découvrez l'Égypte 🐪🏺
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">
             Restaurants 🍽️, Hôtels 🏨 et Attractions Touristiques 🏛️
           </p>
 
           {/* Bouton pour enregistrer un établissement */}
           {session?.user && (
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <Button
                 onClick={() => router.push('/establishment/request')}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 mx-auto"
+                className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors duration-200 flex items-center gap-1 sm:gap-2 mx-auto text-xs sm:text-sm"
               >
-                <Building2 className="h-5 w-5" />
-                Enregistrer mon établissement
-                <Plus className="h-4 w-4" />
+                <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">Enregistrer mon établissement</span>
+                <span className="sm:hidden">Mon établissement</span>
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 sm:mt-2 px-2">
                 Vous êtes propriétaire d'un restaurant, hôtel ou attraction ? Rejoignez-nous !
               </p>
             </div>
           )}
 
           {/* Bannière publicitaire header */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6 hidden sm:block">
             <AdBanner position="HEADER_BANNER" className="mx-auto" />
           </div>
 
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-6">
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-4 sm:mb-6 px-2 sm:px-0">
             <div className="search-container relative">
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
+                  <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5 z-10" />
                   <input
                     type="text"
                     value={query}
                     onChange={(e) => handleQueryChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Rechercher..."
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:border-transparent transition-all duration-300 ${
+                    className={`w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border rounded-lg bg-white dark:bg-gray-800 text-sm sm:text-base text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:border-transparent transition-all duration-300 ${
                       searchSource === 'chatbot' 
                         ? 'border-yellow-400 focus:ring-yellow-500 shadow-yellow-200 shadow-md' 
                         : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
@@ -554,10 +555,10 @@ const getFallbackSuggestions = (value: string): string[] => {
                     </div>
                   )}
                 </div>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={loading}
-                  className={`px-6 py-3 text-white transition-all duration-300 ${
+                  className={`px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base text-white transition-all duration-300 ${
                     searchSource === 'chatbot'
                       ? 'bg-yellow-600 hover:bg-yellow-700'
                       : 'bg-blue-600 hover:bg-blue-700'
@@ -638,11 +639,11 @@ const getFallbackSuggestions = (value: string): string[] => {
             )}
           </form>
 
-          <div className="flex flex-wrap justify-center gap-4 mb-6">
-            <div className="flex gap-2">
-              <span className="flex items-center text-gray-600 dark:text-gray-400">
-                <Filter className="h-4 w-4 mr-1" />
-                Filtres :
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-4 sm:mb-6 px-2">
+            <div className="flex gap-1 sm:gap-2 items-center flex-wrap">
+              <span className="flex items-center text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
+                <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <span className="hidden sm:inline">Filtres :</span>
               </span>
               {["restaurant", "lodging", "tourist_attraction"].map(type => (
                 <Button
@@ -650,18 +651,20 @@ const getFallbackSuggestions = (value: string): string[] => {
                   variant={selectedTypes.includes(type) ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleTypeFilter(type)}
-                  className="text-sm"
+                  className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
                 >
-                  {getTypeLabel(type)}
+                  <span className="sm:hidden">{getTypeLabel(type).split(' ')[0]}</span>
+                  <span className="hidden sm:inline">{getTypeLabel(type)}</span>
                 </Button>
               ))}
               {selectedTypes.length === 0 ? (
-                <span className="text-xs text-green-600 dark:text-green-400 flex items-center ml-2">
+                <span className="text-xs text-green-600 dark:text-green-400 flex items-center ml-1 sm:ml-2 hidden sm:inline-flex">
                   (tous types actifs)
                 </span>
               ) : (
-                <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center ml-2">
-                  ({selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''} sélectionné{selectedTypes.length > 1 ? 's' : ''})
+                <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center ml-1 sm:ml-2">
+                  <span className="sm:hidden">({selectedTypes.length})</span>
+                  <span className="hidden sm:inline">({selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''} sélectionné{selectedTypes.length > 1 ? 's' : ''})</span>
                 </span>
               )}
             </div>
@@ -669,17 +672,19 @@ const getFallbackSuggestions = (value: string): string[] => {
             <Button
               variant="outline"
               onClick={() => setShowMap(!showMap)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm"
             >
               {showMap ? (
                 <>
-                  <Grid className="h-4 w-4" />
-                  Vue Grille
+                  <Grid className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Vue Grille</span>
+                  <span className="sm:hidden">Grille</span>
                 </>
               ) : (
                 <>
-                  <Map className="h-4 w-4" />
-                  Vue Carte
+                  <Map className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Vue Carte</span>
+                  <span className="sm:hidden">Carte</span>
                 </>
               )}
             </Button>
@@ -687,21 +692,24 @@ const getFallbackSuggestions = (value: string): string[] => {
         </div>
 
         {showMap ? (
-          <div className="mb-8">
+          <div className="mb-4 sm:mb-8 px-2 sm:px-0">
             <GoogleMapRender
               places={filteredPlaces}
               onMarkerClick={handleMarkerClick}
-              className="w-full h-96 lg:h-[500px]"
+              className="w-full h-64 sm:h-80 lg:h-96 xl:h-[500px] rounded-lg"
             />
-            <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">
-              {filteredPlaces.length} lieu(x) affiché(s) sur la carte
+            <p className="text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2">
+              <span className="sm:hidden">{filteredPlaces.length} lieu(x)</span>
+              <span className="hidden sm:inline">{filteredPlaces.length} lieu(x) affiché(s) sur la carte</span>
               {selectedTypes.length === 0 ? (
-                <span className="ml-2 text-green-600 dark:text-green-400">
-                  • Tous types de lieux • Max {getMaxResults()} résultats
+                <span className="ml-1 sm:ml-2 text-green-600 dark:text-green-400">
+                  <span className="hidden sm:inline">• Tous types de lieux • Max {getMaxResults()} résultats</span>
+                  <span className="sm:hidden">• Tous</span>
                 </span>
               ) : (
-                <span className="ml-2 text-blue-600 dark:text-blue-400">
-                  • Filtré sur {selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''} • Max {getMaxResults()} résultats
+                <span className="ml-1 sm:ml-2 text-blue-600 dark:text-blue-400">
+                  <span className="hidden sm:inline">• Filtré sur {selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''} • Max {getMaxResults()} résultats</span>
+                  <span className="sm:hidden">• Filtré({selectedTypes.length})</span>
                 </span>
               )}
             </p>
@@ -709,64 +717,64 @@ const getFallbackSuggestions = (value: string): string[] => {
         ) : null}
 
         {/* Pub avant les résultats */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-8 hidden sm:block">
           <AdBanner position="CONTENT_TOP" />
         </div>
 
-        <div className="mb-8" id="search-results">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-              {query ? `Résultats pour "${query}"` : "Lieux populaires"}
+        <div className="mb-4 sm:mb-8" id="search-results">
+          <div className="flex justify-between items-center mb-3 sm:mb-4 px-2 sm:px-0">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 dark:text-white">
+              <span className="hidden sm:inline">{query ? `Résultats pour "${query}"` : "Lieux populaires"}</span>
+              <span className="sm:hidden">{query ? `"${query.substring(0, 20)}${query.length > 20 ? '...' : ''}"` : "Populaires"}</span>
               {searchSource === 'chatbot' && (
-                <span className="ml-2 text-yellow-600 dark:text-yellow-400 text-lg">🤖</span>
+                <span className="ml-1 sm:ml-2 text-yellow-600 dark:text-yellow-400 text-base sm:text-lg">🤖</span>
               )}
             </h2>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-600 dark:text-gray-400">
-                {filteredPlaces.length} résultat(s)
+            <div className="flex items-center gap-2 sm:gap-4">
+              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                <span className="sm:hidden">{filteredPlaces.length}</span>
+                <span className="hidden sm:inline">{filteredPlaces.length} résultat(s)</span>
               </span>
             </div>
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 px-2 sm:px-0">
               {Array.from({ length: 8 }).map((_, index) => (
                 <SkeletonCard key={index} />
               ))}
             </div>
           ) : filteredPlaces.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 px-2 sm:px-0">
              {adaptPlacesForCards(filteredPlaces).map((place, index) => (
-                <CustomCard 
-                  key={`${place.placeId}-${index}`} 
+                <CustomCard
+                  key={`${place.placeId}-${index}`}
                   place={place}
                   onClick={() => handlePlaceClick(place)}
                 />
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <div className="text-gray-500 dark:text-gray-400 text-lg">
+            <div className="text-center py-8 sm:py-12 px-4">
+              <div className="text-gray-500 dark:text-gray-400 text-base sm:text-lg">
                 {query ? "Aucun résultat trouvé" : "Aucun lieu disponible"}
               </div>
               {query && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-2">
                   Essayez avec d'autres mots-clés
                 </p>
-                
               )}
-              
             </div>
           )}
         </div>
 
         {/* Pub après les résultats */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-8 hidden sm:block">
           <AdBanner position="CONTENT_BOTTOM" />
         </div>
 
         {session?.user && (
-          <div className="mb-8">
+          <div className="mb-4 sm:mb-8 px-2 sm:px-0">
             <VisitHistory />
           </div>
         )}
