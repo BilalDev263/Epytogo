@@ -25,7 +25,6 @@ model User {
   reviews         Review[]
   visits          Visit[]
   reservations    Reservation[]
-  adClicks        AdClick[]
   ownedEstablishments Establishment[] @relation("EstablishmentOwner")
   staffEstablishments EstablishmentStaff[]
 }
@@ -127,76 +126,10 @@ enum ReservationStatus {
   COMPLETED
 }
 
-model Advertisement {
-  id           String     @id @default(auto()) @map("_id") @db.ObjectId
-  title        String
-  description  String
-  imageUrl     String
-  targetUrl    String
-  advertiser   String
-  position     AdPosition
-  isActive     Boolean    @default(true)
-  budget       Float      @default(0)
-  spent        Float      @default(0)
-  impressions  Int        @default(0)
-  clicks       Int        @default(0)
-  cpm          Float      @default(2.5) // Coût par mille impressions
-  cpc          Float      @default(0.25) // Coût par clic
-  startDate    DateTime
-  endDate      DateTime
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  
-  adClicks     AdClick[]
-  
-  @@index([position, isActive])
-  @@index([startDate, endDate])
-}
 
-model AdClick {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  adId        String        @db.ObjectId
-  ad          Advertisement @relation(fields: [adId], references: [id])
-  userId      String?       @db.ObjectId
-  user        User?         @relation(fields: [userId], references: [id])
-  ipAddress   String
-  userAgent   String
-  clickedAt   DateTime      @default(now())
-  revenue     Float         @default(0.25)
-  
-  @@index([adId, clickedAt])
-}
 
-model Revenue {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  date        DateTime
-  impressions Int         @default(0)
-  clicks      Int         @default(0)
-  revenue     Float       @default(0)
-  source      RevenueSource
-  details     String?
-  createdAt   DateTime    @default(now())
-  
-  @@unique([date, source])
-}
 
-enum AdPosition {
-  HEADER_BANNER
-  SIDEBAR_TOP
-  SIDEBAR_BOTTOM
-  CONTENT_TOP
-  CONTENT_BOTTOM
-  MOBILE_BOTTOM
-  PLACE_DETAILS
-  SEARCH_RESULTS
-}
 
-enum RevenueSource {
-  ADVERTISEMENTS
-  RESERVATIONS
-  AFFILIATE
-  PREMIUM
-}
 
 enum UserRole {
   USER
