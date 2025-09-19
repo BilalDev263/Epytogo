@@ -46,8 +46,11 @@ prisma/generated/
 
 # Documentation interne
 FEATURES_OVERVIEW.md
+/docs
 
 /etapes
+
+/scripts
 
 RAPPORT_ANALYSIS.md
 

@@ -16,9 +16,6 @@ const nextConfig = {
       }
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma']
-  },
   // Force toutes les routes API à être dynamiques
   async headers() {
     return [
