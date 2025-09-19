@@ -63,12 +63,13 @@ export class Service implements ServiceInterface {
 
   async searchNearby(params: SearchNearbyParams): Promise<GooglePlacesResponse> {
     const url = `${this.baseUrl}/v1/places:searchNearby`;
-    
+
     const body = JSON.stringify({
       locationRestriction: params.locationRestriction,
       includedTypes: params.includedTypes,
       maxResultCount: Math.min(params.maxResultCount, 20),
       languageCode: params.languageCode,
+      includedRegionCodes: ["eg"]
     });
 
     const requestHeaders = new Headers();
@@ -100,11 +101,18 @@ export class Service implements ServiceInterface {
 
   async searchText(params: SearchTextParams): Promise<GooglePlacesResponse> {
     const url = `${this.baseUrl}/v1/places:searchText`;
-    
+
     const body = JSON.stringify({
       textQuery: params.textQuery,
       maxResultCount: Math.min(params.maxResultCount, 20),
       languageCode: params.languageCode,
+      includedRegionCodes: ["eg"],
+      locationRestriction: {
+        rectangle: {
+          low: { latitude: 22.0, longitude: 24.7 },
+          high: { latitude: 31.7, longitude: 36.9 }
+        }
+      }
     });
 
     const requestHeaders = new Headers();
@@ -154,6 +162,13 @@ export class Service implements ServiceInterface {
       textQuery,
       includedType: type,
       maxResultCount: Math.max(this.maxResults * 3, 20),
+      includedRegionCodes: ["eg"],
+      locationRestriction: {
+        rectangle: {
+          low: { latitude: 22.0, longitude: 24.7 },
+          high: { latitude: 31.7, longitude: 36.9 }
+        }
+      }
     });
 
     const requestHeaders = new Headers();
