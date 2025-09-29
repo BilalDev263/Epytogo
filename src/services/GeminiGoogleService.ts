@@ -26,7 +26,7 @@ export interface AIResponse {
 
 export class GeminiGoogleService {
   private static readonly GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-  private static readonly GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+  private static readonly GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
   private static readonly SYSTEM_PROMPT = `Tu es Anubis, guide touristique égyptien expert et passionné.
 
@@ -132,10 +132,22 @@ Tu peux inventer des noms réalistes si tu ne te souviens pas exactement, l'impo
         })
       });
 
+      console.log('📊 Statut de la réponse:', response.status, response.statusText);
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Erreur Gemini HTTP:', response.status, errorText);
-        throw new Error(`Gemini Error: ${response.status}`);
+        console.error('❌ Erreur Gemini HTTP complète:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          errorBody: errorText
+        });
+
+        if (response.status === 429) {
+          throw new Error('QUOTA_EXCEEDED');
+        }
+
+        throw new Error(`Gemini Error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
