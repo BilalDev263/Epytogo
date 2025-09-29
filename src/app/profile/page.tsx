@@ -38,7 +38,7 @@ interface Reservation {
     phone: string | null;
     email: string | null;
     website: string | null;
-  };
+  } | null;
   reservationDate: string;
   timeSlot: string | null;
   roomNumber: string | null;
@@ -74,6 +74,11 @@ const ProfilePage: React.FC = () => {
   const [cancellingReservation, setCancellingReservation] = useState<string | null>(null);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [userSubscription, setUserSubscription] = useState<string>('FREEMIUM');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -431,12 +436,12 @@ const ProfilePage: React.FC = () => {
                 <div key={reservation.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4 flex-1">
-                      <div className="text-3xl">{getTypeIcon(reservation.establishment.type)}</div>
+                      <div className="text-3xl">{getTypeIcon(reservation.establishment?.type || 'ATTRACTION')}</div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                            {reservation.establishment.name}
+                            {reservation.establishment?.name || 'Établissement non disponible'}
                           </h3>
                           <span className={getStatusBadge(reservation.status)}>
                             {getStatusText(reservation.status)}
@@ -446,12 +451,12 @@ const ProfilePage: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400">
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
-                            <span>{new Date(reservation.reservationDate).toLocaleDateString('fr-FR', {
+                            <span>{isMounted ? new Date(reservation.reservationDate).toLocaleDateString('fr-FR', {
                               weekday: 'long',
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric'
-                            })}</span>
+                            }) : reservation.reservationDate}</span>
                           </div>
 
                           {reservation.timeSlot && (
@@ -483,7 +488,7 @@ const ProfilePage: React.FC = () => {
                         )}
 
                         <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                          Réservé le {new Date(reservation.createdAt).toLocaleDateString('fr-FR')}
+                          Réservé le {isMounted ? new Date(reservation.createdAt).toLocaleDateString('fr-FR') : reservation.createdAt}
                         </div>
                       </div>
                     </div>
@@ -540,10 +545,10 @@ const ProfilePage: React.FC = () => {
 
               <div className="p-6 space-y-6">
                 <div className="flex items-center gap-4">
-                  <div className="text-4xl">{getTypeIcon(selectedReservation.establishment.type)}</div>
+                  <div className="text-4xl">{getTypeIcon(selectedReservation.establishment?.type || 'ATTRACTION')}</div>
                   <div>
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {selectedReservation.establishment.name}
+                      {selectedReservation.establishment?.name || 'Établissement non disponible'}
                     </h4>
                     <span className={getStatusBadge(selectedReservation.status)}>
                       {getStatusText(selectedReservation.status)}
@@ -557,12 +562,12 @@ const ProfilePage: React.FC = () => {
                       Date de réservation
                     </label>
                     <p className="text-gray-900 dark:text-white">
-                      {new Date(selectedReservation.reservationDate).toLocaleDateString('fr-FR', {
+                      {isMounted ? new Date(selectedReservation.reservationDate).toLocaleDateString('fr-FR', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
-                      })}
+                      }) : selectedReservation.reservationDate}
                     </p>
                   </div>
 
@@ -609,7 +614,7 @@ const ProfilePage: React.FC = () => {
                     Contact établissement
                   </label>
                   <div className="space-y-2">
-                    {selectedReservation.establishment.phone && (
+                    {selectedReservation.establishment?.phone && (
                       <div className="flex items-center gap-2 text-sm">
                         <Phone className="h-4 w-4 text-gray-400" />
                         <a
@@ -620,7 +625,7 @@ const ProfilePage: React.FC = () => {
                         </a>
                       </div>
                     )}
-                    {selectedReservation.establishment.email && (
+                    {selectedReservation.establishment?.email && (
                       <div className="flex items-center gap-2 text-sm">
                         <Mail className="h-4 w-4 text-gray-400" />
                         <a
@@ -631,7 +636,7 @@ const ProfilePage: React.FC = () => {
                         </a>
                       </div>
                     )}
-                    {selectedReservation.establishment.website && (
+                    {selectedReservation.establishment?.website && (
                       <div className="flex items-center gap-2 text-sm">
                         <Globe className="h-4 w-4 text-gray-400" />
                         <a
